@@ -85,9 +85,11 @@
 
 /* ── Nav glass ─── */
 .nav-glass {
-  background: rgba(255,254,249,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255,254,249,0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 #e8e0d0, 0 2px 12px rgba(26,18,8,.06);
+  z-index: 9999 !important;
 }
 
 /* ── Cards ─── */
@@ -138,7 +140,7 @@
 
 /* ── Hero DNA canvas ─── */
 #dna-canvas {
-  position: absolute; top: 0; right: 0;
+  position: absolute; top: 0; right: 0; z-index: 0;
   width: min(500px, 50vw); height: 100%;
   pointer-events: none; opacity: .7;
 }

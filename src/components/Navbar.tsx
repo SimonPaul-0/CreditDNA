@@ -37,8 +37,8 @@ export default function Navbar({ page, onNavigate }: Props) {
   return (
     <>
       <nav
-        className="nav-glass fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
-        style={{ height: 60, padding: '0 clamp(16px,4vw,32px)', borderBottom: '1px solid #e8e0d0' }}
+        className="nav-glass flex items-center justify-between"
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, height: 60, padding: '0 clamp(16px,4vw,32px)', borderBottom: '1px solid #e8e0d0' }}
       >
         <button onClick={() => go('landing')} className="flex items-center gap-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
           <div style={{ width: 32, height: 32, background: '#d4500f', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>C</div>
