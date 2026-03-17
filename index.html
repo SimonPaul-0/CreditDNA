@@ -469,20 +469,7 @@ const ADMIN_KEY = 'CDNA2025';
  */
 
 /** @type {Transaction[]} Demo transaction data */
-const MOCK_TXN = [
-  { id:'T1',  date:'14 Mar', merchant:'Swiggy',            cat:'Food',       amt:-340,  credit:false, upi:'swiggy@icici',  ico:'🍔' },
-  { id:'T2',  date:'13 Mar', merchant:'BESCOM Electricity', cat:'Utilities',  amt:-1240, credit:false, upi:'bescom@sbi',    ico:'⚡' },
-  { id:'T3',  date:'13 Mar', merchant:'Salary Credit',      cat:'Income',     amt:25000, credit:true,  upi:'employer@hdfc', ico:'💰' },
-  { id:'T4',  date:'12 Mar', merchant:'Zomato',             cat:'Food',       amt:-280,  credit:false, upi:'zomato@kotak',  ico:'🍕' },
-  { id:'T5',  date:'11 Mar', merchant:'DMart',              cat:'Groceries',  amt:-1850, credit:false, upi:'dmart@axis',    ico:'🛒' },
-  { id:'T6',  date:'10 Mar', merchant:'Airtel Recharge',    cat:'Utilities',  amt:-399,  credit:false, upi:'airtel@airtel', ico:'📱' },
-  { id:'T7',  date:'09 Mar', merchant:'Rapido',             cat:'Transport',  amt:-95,   credit:false, upi:'rapido@ybl',    ico:'🛵' },
-  { id:'T8',  date:'08 Mar', merchant:'Freelance Payment',  cat:'Income',     amt:5000,  credit:true,  upi:'client@paytm',  ico:'💼' },
-  { id:'T9',  date:'07 Mar', merchant:'Amazon',             cat:'Shopping',   amt:-1299, credit:false, upi:'amazon@apl',    ico:'📦' },
-  { id:'T10', date:'06 Mar', merchant:'BWSSB Water Bill',   cat:'Utilities',  amt:-480,  credit:false, upi:'bwssb@sbi',     ico:'💧' },
-  { id:'T11', date:'05 Mar', merchant:'Ola Auto',           cat:'Transport',  amt:-65,   credit:false, upi:'ola@ola',       ico:'🚗' },
-  { id:'T12', date:'04 Mar', merchant:'Jio Recharge',       cat:'Utilities',  amt:-299,  credit:false, upi:'jio@jio',       ico:'📶' },
-];
+const MOCK_TXN = []; // Replaced by user-uploaded PDF data
 
 /** Occupation labels */
 const OCC_LABELS = {
@@ -1412,9 +1399,9 @@ function renderDashboard(go) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;flex-wrap:wrap;gap:14px;">
       <div>
         <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">
-          Hi, ${u.name.split(' ')[0]} ${isAdmin(u)?'👑':'👋'}
+          Hi, ${escapeHTML(u.name).split(' ')[0]} ${isAdmin(u)?'👑':'👋'}
         </h1>
-        <p style="font-size:14px;color:#8c7d6a;">${u.email}${isAdmin(u)?` · <span style="color:#d4500f;font-weight:600;">Admin</span>`:''}</p>
+        <p style="font-size:14px;color:#8c7d6a;">${escapeHTML(u.email)}${isAdmin(u)?` · <span style="color:#d4500f;font-weight:600;">Admin</span>`:''}</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${isAdmin(u) ? `<a href="admin.html" class="btn-outline btn-sm" style="color:#d4500f;border-color:rgba(212,80,15,.3);">👑 Admin Portal</a>` : ''}
@@ -1473,7 +1460,7 @@ function renderDashboard(go) {
     <div class="db-grid" style="gap:16px;margin-bottom:20px;">
       <div class="cdna-card" style="padding:22px;">
         <div class="label">Recent Activity</div>
-        ${MOCK_TXN.slice(0,4).map(t => `
+        ${(u.transactions||[]).slice(0,4).map(t => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f0e8;">
           <div class="txn-ico" style="background:${t.credit?'#e8f5ef':'#fdecea'};">${t.ico}</div>
           <div style="flex:1;min-width:0;">
@@ -1528,151 +1515,556 @@ function renderCheck(go) {
   if (!u) { go('login'); return; }
 
   document.getElementById('app').innerHTML = `
-  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:660px; margin:0 auto;">
-    <div style="text-align:center;margin-bottom:28px;">
+  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:720px; margin:0 auto;">
+    <div style="text-align:center;margin-bottom:32px;">
       <span class="label">Score Check</span>
       <h1 class="font-display font-extrabold text-ink mb-3" style="font-size:clamp(24px,5vw,36px);">Generate Your CreditDNA Score</h1>
-      <p style="font-size:15px;color:#4a3f30;line-height:1.7;">Answer 5 quick questions about your UPI behaviour. Processed locally — nothing is uploaded.</p>
+      <p style="font-size:15px;color:#4a3f30;line-height:1.7;max-width:520px;margin:0 auto;">
+        Upload your UPI transaction PDF (GPay, PhonePe, Paytm, BHIM) — we extract and analyse it
+        <strong>entirely on your device</strong>. Nothing is uploaded to any server.
+      </p>
     </div>
-    <div class="cdna-card" style="padding:30px;border-radius:20px;" id="score-form">
-      <div style="display:flex;align-items:center;gap:10px;background:#fff0e8;border:1px solid rgba(212,80,15,.3);border-radius:12px;padding:12px 14px;margin-bottom:22px;">
-        <span style="font-size:18px;">🔒</span>
-        <span style="font-size:13px;color:#4a3f30;">Your answers are processed locally on your device. Nothing is uploaded anywhere.</span>
+
+    <!-- Privacy banner -->
+    <div style="display:flex;align-items:flex-start;gap:12px;background:#e8f5ef;border:1px solid rgba(15,126,90,.3);border-radius:14px;padding:16px;margin-bottom:28px;">
+      <span style="font-size:22px;flex-shrink:0;">🔒</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#0f7e5a;margin-bottom:4px;">100% On-Device Processing</div>
+        <div style="font-size:13px;color:#4a3f30;line-height:1.6;">
+          Your PDF is read by your browser's built-in PDF.js library. No data is sent anywhere.
+          The raw text never leaves your device — only the final score is saved to your profile.
+        </div>
       </div>
-      ${[['q1','How often do you make UPI payments?',
-          [['3','Rarely — less than 5/month'],['6','Sometimes — 5 to 20/month'],['8','Regularly — 20 to 50/month'],['10','Very often — 50+ times/month']],'8'],
-         ['q2','Do you pay utility bills through UPI?',
-          [['3','No, I never do'],['5','Sometimes, but inconsistently'],['8','Yes, most months'],['10','Yes, every single month']],'10'],
-         ['q3','How many different merchant categories do you pay?',
-          [['3','Only 1–2 types'],['6','About 3–5 types'],['8','Around 6–10 types'],['10','More than 10 different types']],'8'],
-         ['q4','How consistent is your monthly income via UPI?',
-          [['3','Very irregular, hard to predict'],['6','Somewhat irregular'],['8','Mostly consistent month to month'],['10','Very consistent, similar every month']],'8'],
-         ['q5','How long have you been actively using UPI?',
-          [['4','Less than 6 months'],['6','6 months to 1 year'],['8','1 to 3 years'],['10','More than 3 years']],'8'],
-        ].map(([id,lbl,opts,def]) => `
-      <div class="field">
-        <label>${lbl}</label>
-        <select id="${id}">${opts.map(([v,l]) => `<option value="${v}"${v===def?' selected':''}>${l}</option>`).join('')}</select>
-      </div>`).join('')}
-      <button class="btn-primary btn-full btn-lg" style="border-radius:12px;margin-top:8px;" onclick="window._calcScore()">Calculate My Score →</button>
     </div>
+
+    <!-- Upload zone -->
+    <div class="cdna-card" style="padding:0;border-radius:20px;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:20px 24px;border-bottom:1px solid #e8e0d0;background:#faf8f3;">
+        <div style="font-size:13px;font-weight:700;color:#1a1208;margin-bottom:4px;">Step 1 — Upload your UPI Statement PDF</div>
+        <div style="font-size:12px;color:#8c7d6a;">Supported: GPay · PhonePe · Paytm · BHIM · Any UPI bank statement</div>
+      </div>
+      <div style="padding:24px;">
+        <div id="drop-zone" onclick="document.getElementById('pdf-input').click()"
+          style="border:2px dashed #e8e0d0;border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#fffef9;"
+          ondragover="event.preventDefault();this.style.borderColor='#d4500f';this.style.background='#fff0e8';"
+          ondragleave="this.style.borderColor='#e8e0d0';this.style.background='#fffef9';"
+          ondrop="event.preventDefault();this.style.borderColor='#e8e0d0';this.style.background='#fffef9';window._handlePDFDrop(event);">
+          <div style="font-size:40px;margin-bottom:12px;">📄</div>
+          <div class="font-display font-bold text-ink" style="font-size:16px;margin-bottom:6px;">Drop your PDF here or click to browse</div>
+          <div style="font-size:13px;color:#8c7d6a;">Max 10MB · PDF files only</div>
+        </div>
+        <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none;" onchange="window._handlePDFFile(this.files[0])">
+
+        <!-- File info after selection -->
+        <div id="file-info" style="display:none;margin-top:16px;background:#faf8f3;border-radius:10px;padding:14px;display:none;align-items:center;gap:12px;">
+          <span style="font-size:24px;">📋</span>
+          <div style="flex:1;min-width:0;">
+            <div id="file-name" style="font-size:14px;font-weight:600;color:#1a1208;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+            <div id="file-size" style="font-size:12px;color:#8c7d6a;"></div>
+          </div>
+          <button onclick="window._clearPDF()" style="font-size:18px;background:none;border:none;cursor:pointer;color:#8c7d6a;padding:4px;">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Processing status -->
+    <div id="ocr-status" style="display:none;margin-bottom:20px;"></div>
+
+    <!-- Extracted transactions preview -->
+    <div id="txn-preview" style="display:none;margin-bottom:20px;"></div>
+
+    <!-- Calculate button -->
+    <div id="calc-section" style="display:none;">
+      <button class="btn-primary btn-full btn-lg" style="border-radius:14px;" onclick="window._runScoring()">
+        Calculate My Score →
+      </button>
+    </div>
+
+    <!-- Score result -->
     <div id="score-result" style="display:none;"></div>
+
+    <!-- Fallback: no PDF? Use manual questions -->
+    <div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8e0d0;text-align:center;">
+      <div style="font-size:13px;color:#8c7d6a;margin-bottom:8px;">Don't have a PDF handy?</div>
+      <button class="btn-ghost btn-sm" onclick="window._showManualFallback()" style="color:#d4500f;font-size:13px;">
+        Use manual questionnaire instead →
+      </button>
+    </div>
+
+    <div id="manual-fallback" style="display:none;margin-top:20px;"></div>
   </div>`;
 
-  window._calcScore = () => {
-    const vals = ['q1','q2','q3','q4','q5'].map(id => parseInt(document.getElementById(id).value));
-    const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
-    const s    = Math.min(900, Math.max(300, Math.round(300 + (avg/10)*600 + (Math.random()*28-14))));
-    const c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
+  // ── PDF state ────────────────────────────────────────
+  let selectedFile = null;
+  let extractedTxns = [];
 
-    const users = DB.users(), i = users.findIndex(u2 => u2.id === u.id);
-    if (i > -1) { users[i].score = s; DB.save(users); DB.setMe(users[i]); }
+  // ── Drop handler ─────────────────────────────────────
+  window._handlePDFDrop = (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file) window._handlePDFFile(file);
+  };
 
-    document.getElementById('score-form').style.display = 'none';
+  window._clearPDF = () => {
+    selectedFile = null;
+    extractedTxns = [];
+    document.getElementById('file-info').style.display = 'none';
+    document.getElementById('drop-zone').style.display = 'block';
+    document.getElementById('txn-preview').style.display = 'none';
+    document.getElementById('calc-section').style.display = 'none';
+    document.getElementById('ocr-status').style.display = 'none';
+    document.getElementById('pdf-input').value = '';
+  };
+
+  window._handlePDFFile = async (file) => {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      showStatus('error', '❌ Please upload a PDF file only');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showStatus('error', '❌ File too large — max 10MB');
+      return;
+    }
+
+    selectedFile = file;
+
+    // Show file info
+    const fi = document.getElementById('file-info');
+    fi.style.display = 'flex';
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+
+    await extractPDFTransactions(file);
+  };
+
+  // ── Status helper ─────────────────────────────────────
+  function showStatus(type, msg, sub = '') {
+    const el = document.getElementById('ocr-status');
+    const colors = { loading: '#1d5fa8', ok: '#0f7e5a', error: '#c0392b', warn: '#b45309' };
+    const bgs    = { loading: '#e8f0fb', ok: '#e8f5ef', error: '#fdecea', warn: '#fff8e6' };
+    const c = colors[type] || colors.loading;
+    const bg = bgs[type] || bgs.loading;
+    el.style.display = 'block';
+    el.innerHTML = `
+    <div style="background:${bg};border:1px solid ${c}30;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;">
+      ${type === 'loading' ? `<div style="width:16px;height:16px;border:2px solid ${c};border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;margin-top:2px;"></div>` : ''}
+      <div>
+        <div style="font-size:13px;font-weight:600;color:${c};">${msg}</div>
+        ${sub ? `<div style="font-size:12px;color:${c};opacity:.7;margin-top:2px;">${sub}</div>` : ''}
+      </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+  }
+
+  // ── PDF Text Extraction using PDF.js ─────────────────
+  async function extractPDFTransactions(file) {
+    showStatus('loading', 'Reading PDF...', 'Loading PDF.js library');
+
+    try {
+      // Dynamically load PDF.js from CDN
+      if (!window.pdfjsLib) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Failed to load PDF.js'));
+          document.head.appendChild(script);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      showStatus('loading', 'Extracting text from PDF...', 'This runs entirely in your browser');
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(item => item.str).join(' ') + '\n';
+      }
+
+      showStatus('loading', `Analysing ${pdf.numPages} page(s)...`, 'Identifying transactions');
+
+      // Parse transactions from extracted text
+      extractedTxns = parseUPITransactions(fullText);
+
+      if (extractedTxns.length === 0) {
+        showStatus('warn',
+          '⚠️ Could not detect transactions automatically',
+          'Your PDF may be scanned/image-based. Try the manual questionnaire below.');
+        document.getElementById('calc-section').style.display = 'none';
+        return;
+      }
+
+      showStatus('ok',
+        `✅ Found ${extractedTxns.length} transactions`,
+        'Review below then calculate your score');
+
+      showTransactionPreview(extractedTxns);
+      document.getElementById('calc-section').style.display = 'block';
+
+    } catch (err) {
+      console.error('PDF extraction error:', err);
+      showStatus('error',
+        '❌ Could not read this PDF',
+        'Try a different PDF or use the manual questionnaire below.');
+    }
+  }
+
+  // ── UPI Transaction Parser ────────────────────────────
+  function parseUPITransactions(text) {
+    const txns = [];
+    const lines = text.split(/\n|\r/).map(l => l.trim()).filter(Boolean);
+
+    // Common UPI PDF patterns
+    // Matches lines with: date, description, amount (debit or credit)
+    // GPay / PhonePe / BHIM format variations
+    const patterns = [
+      // DD/MM/YYYY or DD-MM-YYYY or DD MMM YYYY
+      /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/i,
+    ];
+
+    // Amount pattern: ₹1,234.56 or 1234.56 Dr/Cr or -1234.56
+    const amtPattern = /[₹Rs\.]?\s*([\d,]+(?:\.\d{2})?)\s*(?:Dr|Cr|CR|DR)?/i;
+    const creditWords = /credit|received|refund|cashback|salary|income|cr\b/i;
+    const debitWords  = /debit|paid|payment|sent|purchase|dr\b/i;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const hasDate = patterns[0].test(line);
+      const hasAmt  = /[\d,]{3,}/.test(line);
+
+      if (!hasDate || !hasAmt) continue;
+
+      // Extract date
+      const dateMatch = line.match(patterns[0]);
+      const date = dateMatch ? dateMatch[0].substring(0,11) : '';
+
+      // Extract amount
+      const amtMatches = [...line.matchAll(/[\d,]+(?:\.\d{2})?/g)];
+      if (amtMatches.length === 0) continue;
+
+      // Take the last number on the line as amount (common in bank statements)
+      const rawAmt = parseFloat(amtMatches[amtMatches.length - 1][0].replace(/,/g, ''));
+      if (isNaN(rawAmt) || rawAmt === 0) continue;
+
+      // Determine credit/debit
+      const isCredit = creditWords.test(line) || /\bCr\b|\bCR\b/.test(line);
+      const isDebit  = debitWords.test(line)  || /\bDr\b|\bDR\b/.test(line);
+      const credit   = isCredit && !isDebit;
+
+      // Extract merchant name: take words between date and amount
+      let merchant = line
+        .replace(patterns[0], '')
+        .replace(/[₹Rs]?\s*[\d,]+(?:\.\d{2})?\s*(?:Dr|Cr|CR|DR)?/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 40);
+
+      if (!merchant) merchant = 'UPI Transaction';
+
+      txns.push({
+        date:     date,
+        merchant: merchant,
+        amt:      credit ? rawAmt : -rawAmt,
+        credit:   credit,
+      });
+    }
+
+    // Fallback: if structured parsing got nothing, try a looser pass
+    if (txns.length === 0) {
+      const looseAmt = /[₹\u20B9]?\s*([\d,]+(?:\.\d{1,2})?)/g;
+      let match;
+      let lineNum = 0;
+      for (const line of lines) {
+        while ((match = looseAmt.exec(line)) !== null) {
+          const amt = parseFloat(match[1].replace(/,/g,''));
+          if (amt > 10 && amt < 10000000) {
+            const credit = creditWords.test(line);
+            txns.push({
+              date: `Line ${++lineNum}`,
+              merchant: line.substring(0, 35) || 'UPI Transaction',
+              amt: credit ? amt : -amt,
+              credit,
+            });
+          }
+        }
+        if (txns.length >= 200) break; // cap
+      }
+    }
+
+    return txns.slice(0, 200); // max 200 transactions
+  }
+
+  // ── Transaction Preview ───────────────────────────────
+  function showTransactionPreview(txns) {
+    const income = txns.filter(t=>t.credit).reduce((a,t)=>a+t.amt,0);
+    const spend  = txns.filter(t=>!t.credit).reduce((a,t)=>a+Math.abs(t.amt),0);
+    const preview5 = txns.slice(0, 5);
+
+    const el = document.getElementById('txn-preview');
+    el.style.display = 'block';
+    el.innerHTML = `
+    <div class="cdna-card" style="padding:0;border-radius:16px;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid #e8e0d0;background:#faf8f3;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:13px;font-weight:700;color:#1a1208;">Step 2 — Review Extracted Transactions</div>
+        <div style="display:flex;gap:16px;">
+          <span style="font-size:12px;color:#0f7e5a;font-weight:600;">+₹${income.toLocaleString('en-IN')} income</span>
+          <span style="font-size:12px;color:#c0392b;font-weight:600;">−₹${spend.toLocaleString('en-IN')} spent</span>
+        </div>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="font-size:12px;color:#8c7d6a;margin-bottom:12px;">Showing first 5 of ${txns.length} transactions detected</div>
+        ${preview5.map(t => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0e8;">
+          <div style="width:30px;height:30px;border-radius:8px;background:${t.credit?'#e8f5ef':'#fdecea'};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">${t.credit?'💰':'💳'}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:#1a1208;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(t.merchant)}</div>
+            <div style="font-size:11px;color:#8c7d6a;">${escapeHTML(t.date)}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:${t.credit?'#0f7e5a':'#c0392b'};flex-shrink:0;">${fmtAmt(t.amt)}</div>
+        </div>`).join('')}
+        ${txns.length > 5 ? `<div style="font-size:12px;color:#8c7d6a;padding-top:8px;text-align:center;">+ ${txns.length - 5} more transactions</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ── Run Scoring ───────────────────────────────────────
+  window._runScoring = () => {
+    if (extractedTxns.length === 0) { toast('No transactions to score', 'err'); return; }
+
+    // Real scoring from actual transaction data
+    const txns   = extractedTxns;
+    const income = txns.filter(t=>t.credit);
+    const debits = txns.filter(t=>!t.credit);
+    const total  = txns.length;
+
+    // Signal 1: Transaction frequency (0-100)
+    const freqScore = Math.min(100, total * 2);
+
+    // Signal 2: Income regularity — consistent credits = higher score (0-100)
+    const incomeAmts = income.map(t => t.amt);
+    const avgIncome  = incomeAmts.length ? incomeAmts.reduce((a,b)=>a+b,0)/incomeAmts.length : 0;
+    const incomeCV   = incomeAmts.length > 1
+      ? (Math.sqrt(incomeAmts.reduce((a,v)=>a+Math.pow(v-avgIncome,2),0)/incomeAmts.length) / (avgIncome||1)) * 100
+      : 50;
+    const incomeScore = Math.max(0, Math.min(100, 100 - incomeCV));
+
+    // Signal 3: Spend diversity — unique merchant count (0-100)
+    const merchants   = new Set(debits.map(t=>t.merchant.toLowerCase().trim()));
+    const diverseScore = Math.min(100, merchants.size * 8);
+
+    // Signal 4: Payment regularity — spread of debit dates (0-100)
+    const regularScore = debits.length >= 5 ? Math.min(100, debits.length * 3) : 30;
+
+    // Signal 5: Income-to-spend ratio (0-100)
+    const totalIncome = income.reduce((a,t)=>a+t.amt,0);
+    const totalSpend  = debits.reduce((a,t)=>a+Math.abs(t.amt),0);
+    const ratioScore  = totalIncome > 0
+      ? Math.min(100, (totalIncome / (totalSpend||1)) * 50)
+      : 40;
+
+    // Weighted average → map to 300-900
+    const weights   = [0.2, 0.25, 0.2, 0.2, 0.15];
+    const signals   = [freqScore, incomeScore, diverseScore, regularScore, ratioScore];
+    const weighted  = signals.reduce((a,v,i) => a + v*weights[i], 0);
+    const score     = Math.min(900, Math.max(300, Math.round(300 + (weighted/100)*600)));
+
+    const c = scoreColor(score), tier = scoreTier(score), pct = scorePct(score);
+
+    // Save transactions + score to user profile
+    const users = DB.users();
+    const idx   = users.findIndex(u2 => u2.id === u.id);
+    if (idx > -1) {
+      users[idx].score        = score;
+      users[idx].transactions = txns;
+      users[idx].scoredAt     = new Date().toISOString();
+      DB.save(users);
+      DB.setMe(users[idx]);
+    }
+
+    // Show result
+    document.getElementById('calc-section').style.display = 'none';
+    document.getElementById('txn-preview').style.display = 'none';
+    document.getElementById('ocr-status').style.display = 'none';
+
     const res = document.getElementById('score-result');
     res.style.display = 'block';
     res.innerHTML = `
     <div class="cdna-card page-enter" style="padding:32px;border-radius:20px;text-align:center;border-top:3px solid ${c};">
-      <div style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#8c7d6a;margin-bottom:16px;">YOUR CREDITDNA SCORE</div>
-      <div class="font-display font-extrabold" style="font-size:88px;color:${c};line-height:1;" id="score-num">—</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#8c7d6a;margin-bottom:16px;">YOUR CREDITDNA SCORE</div>
+      <div class="font-display font-extrabold" style="font-size:88px;color:${c};line-height:1;" id="score-num">300</div>
       <div class="badge" style="background:${c}18;color:${c};margin:12px auto;display:inline-flex;font-size:14px;">${tier}</div>
-      <div class="progress-bar" style="margin:20px 0;"><div class="progress-fill" id="res-pfill" style="width:0;background:${c};"></div></div>
+      <div class="progress-bar" style="margin:20px 0;"><div class="progress-fill" id="res-pfill" style="width:0%;background:${c};"></div></div>
       <div style="display:flex;justify-content:space-between;font-size:12px;color:#8c7d6a;margin-bottom:24px;"><span>300</span><span>900</span></div>
-      <div class="grid-2" style="gap:12px;margin-bottom:24px;">
-        ${[['Payment Regularity',vals[1]*10],['UPI Frequency',vals[0]*10],['Merchant Diversity',vals[2]*10],['Income Consistency',vals[3]*10]]
-          .map(([l,v]) => `
-        <div style="background:#faf8f3;border-radius:10px;padding:14px;text-align:left;">
-          <div style="font-size:12px;color:#8c7d6a;margin-bottom:4px;">${l}</div>
-          <div class="font-display font-bold" style="font-size:22px;color:${c};">${v}<span style="font-size:13px;color:#8c7d6a;">/100</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;text-align:left;">
+        ${[
+          ['Transaction Frequency', Math.round(freqScore)],
+          ['Income Regularity',     Math.round(incomeScore)],
+          ['Merchant Diversity',    Math.round(diverseScore)],
+          ['Payment Regularity',    Math.round(regularScore)],
+          ['Income-Spend Ratio',    Math.round(ratioScore)],
+          ['Transactions Analysed', txns.length + ' txns'],
+        ].map(([l,v]) => `
+        <div style="background:#faf8f3;border-radius:10px;padding:14px;">
+          <div style="font-size:11px;color:#8c7d6a;margin-bottom:4px;">${l}</div>
+          <div class="font-display font-bold" style="font-size:${typeof v==='number'?'22':'16'}px;color:${c};">${typeof v==='number'?v+'<span style="font-size:13px;color:#8c7d6a;">/100</span>':v}</div>
         </div>`).join('')}
+      </div>
+      <div style="background:#fff0e8;border:1px solid rgba(212,80,15,.2);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left;">
+        <div style="font-size:12px;font-weight:700;color:#d4500f;margin-bottom:6px;">Based on ${txns.length} real transactions from your PDF</div>
+        <div style="font-size:12px;color:#4a3f30;">Score is deterministic — same data always gives the same result.</div>
       </div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <button class="btn-primary" onclick="window._go('dashboard')">View Dashboard →</button>
-        <button class="btn-outline" onclick="window.location.reload()">Recalculate</button>
+        <button class="btn-outline" onclick="window._go('transactions')">View Transactions</button>
       </div>
     </div>`;
 
-    // Animate score number
+    // Animate score count-up
     let current = 300;
-    const target = s;
-    const el = document.getElementById('score-num');
-    const interval = setInterval(() => {
-      current = Math.min(target, current + Math.ceil((target - current) / 8) + 2);
-      if (el) el.textContent = current;
-      if (current >= target) clearInterval(interval);
-    }, 30);
-
+    const el2 = document.getElementById('score-num');
+    const timer = setInterval(() => {
+      current = Math.min(score, current + Math.ceil((score - current)/6) + 3);
+      if (el2) el2.innerHTML = current + '<span style="font-size:0;">.</span>';
+      if (current >= score) clearInterval(timer);
+    }, 25);
     setTimeout(() => {
       const fill = document.getElementById('res-pfill');
       if (fill) fill.style.width = pct + '%';
     }, 100);
 
-    toast('🎉 Score generated successfully!', 'ok');
+    toast('🎉 Score calculated from your real transactions!', 'ok');
+  };
+
+  // ── Manual fallback ───────────────────────────────────
+  window._showManualFallback = () => {
+    const el = document.getElementById('manual-fallback');
+    if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = `
+    <div class="cdna-card" style="padding:24px;border-radius:16px;border:2px dashed #e8e0d0;">
+      <div style="font-size:13px;font-weight:700;color:#8c7d6a;margin-bottom:16px;text-align:center;">
+        ⚠️ Manual mode — less accurate than PDF analysis
+      </div>
+      ${[
+        ['q1','How often do you make UPI payments?',
+          [['3','Rarely — less than 5/month'],['6','Sometimes — 5–20/month'],['8','Regularly — 20–50/month'],['10','50+ times/month']],'8'],
+        ['q2','Do you pay utility bills through UPI?',
+          [['3','Never'],['5','Sometimes'],['8','Most months'],['10','Every month without fail']],'10'],
+        ['q3','How many merchant categories do you pay?',
+          [['3','1–2 types'],['6','3–5 types'],['8','6–10 types'],['10','10+ types']],'8'],
+        ['q4','How consistent is your monthly income via UPI?',
+          [['3','Very irregular'],['6','Somewhat irregular'],['8','Mostly consistent'],['10','Very consistent']],'8'],
+        ['q5','How long have you used UPI?',
+          [['4','< 6 months'],['6','6–12 months'],['8','1–3 years'],['10','3+ years']],'8'],
+      ].map(([id,lbl,opts,def]) => `
+      <div class="field">
+        <label>${lbl}</label>
+        <select id="${id}">
+          ${opts.map(([v,l]) => `<option value="${v}"${v===def?' selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>`).join('')}
+      <button class="btn-primary btn-full" style="border-radius:12px;margin-top:8px;" onclick="window._calcManual()">Calculate (Estimated) Score →</button>
+    </div>`;
+  };
+
+  window._calcManual = () => {
+    const vals = ['q1','q2','q3','q4','q5'].map(id => parseInt(document.getElementById(id).value));
+    const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
+    const s    = Math.min(900, Math.max(300, Math.round(300 + (avg/10)*600)));
+    const c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
+
+    const users = DB.users(), i = users.findIndex(u2 => u2.id === u.id);
+    if (i > -1) { users[i].score = s; users[i].scoredAt = new Date().toISOString(); DB.save(users); DB.setMe(users[i]); }
+
+    document.getElementById('manual-fallback').innerHTML = `
+    <div class="cdna-card page-enter" style="padding:28px;border-radius:16px;text-align:center;border-top:3px solid ${c};">
+      <div style="font-size:12px;color:#8c7d6a;margin-bottom:8px;">ESTIMATED SCORE (manual)</div>
+      <div class="font-display font-extrabold" style="font-size:72px;color:${c};line-height:1;">${s}</div>
+      <div class="badge" style="background:${c}18;color:${c};margin:10px auto;display:inline-flex;">${tier}</div>
+      <div class="progress-bar" style="margin:16px 0;"><div class="progress-fill" style="width:${pct}%;background:${c};"></div></div>
+      <p style="font-size:13px;color:#8c7d6a;margin-bottom:16px;">For a more accurate score, upload your UPI PDF above.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-primary btn-sm" onclick="window._go('dashboard')">Dashboard →</button>
+        <button class="btn-outline btn-sm" onclick="window.location.reload()">Upload PDF instead</button>
+      </div>
+    </div>`;
+    toast('Estimated score generated', 'ok');
   };
 }
 
-/* ══════════════════════════════════════════
-   TRANSACTIONS
-══════════════════════════════════════════ */
+
 function renderTransactions(go) {
   const u = DB.me();
   if (!u) { go('login'); return; }
 
-  const total  = MOCK_TXN.reduce((a,t) => a + t.amt, 0);
-  const income = MOCK_TXN.filter(t=>t.credit).reduce((a,t)=>a+t.amt,0);
-  const spend  = MOCK_TXN.filter(t=>!t.credit).reduce((a,t)=>a+Math.abs(t.amt),0);
+  // Use transactions from user's uploaded PDF, or empty state
+  const txns = (u.transactions || []);
+  const total  = txns.reduce((a,t) => a + t.amt, 0);
+  const income = txns.filter(t=>t.credit).reduce((a,t)=>a+t.amt,0);
+  const spend  = txns.filter(t=>!t.credit).reduce((a,t)=>a+Math.abs(t.amt),0);
 
   document.getElementById('app').innerHTML = `
   <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:900px; margin:0 auto;">
     <div style="margin-bottom:24px;">
       <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">UPI Transactions</h1>
-      <p style="font-size:14px;color:#8c7d6a;">Demo data — in production, your data stays on-device and is never uploaded.</p>
+      <p style="font-size:14px;color:#8c7d6a;">${txns.length > 0 ? `${txns.length} transactions from your uploaded PDF` : 'No transactions yet — upload your UPI statement to get started'}</p>
     </div>
 
+    ${txns.length > 0 ? `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;" class="ag">
-      ${[['Total Balance',fmtAmt(total),'#d4500f'],['Income',fmtAmt(income),'#0f7e5a'],['Expenses',`−₹${spend.toLocaleString('en-IN')}`,'#c0392b']]
-        .map(([l,v,c]) => `
-      <div class="cdna-card" style="padding:20px;border-top:3px solid ${c};">
-        <div style="font-size:12px;color:#8c7d6a;margin-bottom:6px;">${l}</div>
-        <div class="font-display font-bold" style="font-size:24px;color:${c};">${v}</div>
-      </div>`).join('')}
+      ${[['Total Balance',fmtAmt(total),'#d4500f'],['Income',fmtAmt(income),'#0f7e5a'],['Expenses',\`−₹\${spend.toLocaleString('en-IN')}\`,'#c0392b']]
+        .map(([l,v,c]) => \`
+      <div class="cdna-card" style="padding:20px;border-top:3px solid \${c};">
+        <div style="font-size:12px;color:#8c7d6a;margin-bottom:6px;">\${l}</div>
+        <div class="font-display font-bold" style="font-size:24px;color:\${c};">\${v}</div>
+      </div>\`).join('')}
     </div>
-
     <div class="cdna-card" style="overflow:hidden;">
       <div style="padding:18px 20px;border-bottom:1px solid #e8e0d0;font-size:13px;font-weight:700;color:#1a1208;">
-        All Transactions (${MOCK_TXN.length})
+        All Transactions (${txns.length})
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="background:#faf8f3;">
               <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">MERCHANT</th>
-              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">CATEGORY</th>
-              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">UPI ID</th>
               <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">DATE</th>
               <th style="text-align:right;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">AMOUNT</th>
             </tr>
           </thead>
           <tbody>
-            ${MOCK_TXN.map(t => `
+            ${txns.map(t => \`
             <tr style="border-bottom:1px solid #f5f0e8;">
               <td style="padding:12px 16px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div class="txn-ico" style="background:${t.credit?'#e8f5ef':'#fdecea'};width:34px;height:34px;font-size:14px;">${t.ico}</div>
-                  <div style="font-size:13px;font-weight:600;color:#1a1208;">${t.merchant}</div>
+                  <div class="txn-ico" style="background:\${t.credit?'#e8f5ef':'#fdecea'};width:34px;height:34px;font-size:14px;">\${t.credit?'💰':'💳'}</div>
+                  <div style="font-size:13px;font-weight:600;color:#1a1208;">\${escapeHTML(t.merchant)}</div>
                 </div>
               </td>
-              <td style="padding:12px 16px;"><span class="badge badge-blue" style="font-size:11px;">${t.cat}</span></td>
-              <td style="padding:12px 16px;font-size:12px;color:#8c7d6a;font-family:monospace;">${t.upi}</td>
-              <td style="padding:12px 16px;font-size:13px;color:#8c7d6a;">${t.date}</td>
-              <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:${t.credit?'#0f7e5a':'#c0392b'};">${fmtAmt(t.amt)}</td>
-            </tr>`).join('')}
+              <td style="padding:12px 16px;font-size:13px;color:#8c7d6a;">\${escapeHTML(t.date)}</td>
+              <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:\${t.credit?'#0f7e5a':'#c0392b'};">\${fmtAmt(t.amt)}</td>
+            </tr>\`).join('')}
           </tbody>
         </table>
       </div>
-    </div>
-  </div>`;
+    </div>` : `
+    <div class="cdna-card" style="padding:56px 32px;text-align:center;">
+      <div style="font-size:56px;margin-bottom:16px;">📄</div>
+      <h3 class="font-display font-bold text-ink mb-3" style="font-size:22px;">No transactions yet</h3>
+      <p style="color:#8c7d6a;font-size:14px;max-width:360px;margin:0 auto 24px;">
+        Upload your GPay, PhonePe or any UPI statement PDF from the Check Score page to see your real transactions here.
+      </p>
+      <button class="btn-primary" onclick="window._go('check')">Upload UPI Statement →</button>
+    </div>`}
+  </div>\`;
 }
+
 
 /* ══════════════════════════════════════════
    PROFILE
@@ -1687,10 +2079,10 @@ function renderProfile(go) {
 
     <div class="cdna-card" style="padding:28px;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-        <div style="width:60px;height:60px;border-radius:16px;background:#fff0e8;border:2px solid rgba(212,80,15,.3);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;color:#d4500f;">${u.name.charAt(0)}</div>
+        <div style="width:60px;height:60px;border-radius:16px;background:#fff0e8;border:2px solid rgba(212,80,15,.3);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;color:#d4500f;">${escapeHTML(u.name).charAt(0)}</div>
         <div>
           <div class="font-display font-bold text-ink" style="font-size:20px;">${u.name}</div>
-          <div style="font-size:14px;color:#8c7d6a;">${u.email}</div>
+          <div style="font-size:14px;color:#8c7d6a;">${escapeHTML(u.email)}</div>
           ${isAdmin(u) ? `<span class="badge badge-gold" style="margin-top:4px;">👑 Admin</span>` : ''}
         </div>
       </div>
