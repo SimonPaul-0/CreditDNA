@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CreditDNA — Credit for Every Indian</title>
+<meta name="description" content="Your UPI history is your credit history. CreditDNA builds a 300–900 credit score on your device.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        accent: '#d4500f', 'accent-h': '#b83d0a',
+        ink: '#1a1208', 'ink-2': '#4a3f30', 'ink-3': '#8c7d6a',
+        surface: '#ffffff', 'surf-2': '#faf8f3',
+        bg: '#fffef9', 'bg-alt': '#f5f0e8',
+        border: '#e8e0d0', 'border-2': '#d4c9b5',
+        dna: '#22c55e', green: '#0f7e5a', 'green-bg': '#e8f5ef',
+        red: '#c0392b', 'red-bg': '#fdecea',
+      },
+      fontFamily: {
+        display: ['"Bricolage Grotesque"', 'sans-serif'],
+        body:    ['"Plus Jakarta Sans"',   'sans-serif'],
+      },
+    }
+  }
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* ══════════════════════════════════════
+   CreditDNA — Custom Styles
+   (Tailwind handles utilities; this file
+   handles animations, vars & specifics)
+══════════════════════════════════════ */
+
+/* ── Scrollbar ───────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #fffef9; }
+::-webkit-scrollbar-thumb { background: #d4c9b5; border-radius: 4px; }
+
+/* ── Nav glass ───────────────────── */
+.nav-glass {
+  background: rgba(255,254,249,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Page transitions ────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: translateX(-50%) scale(.92); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+@keyframes scoreReveal {
+  from { opacity:0; transform: scale(.8); }
+  to   { opacity:1; transform: scale(1); }
+}
+@keyframes arcFill {
+  from { stroke-dashoffset: 502; }
+}
+@keyframes countUp {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.page-enter { animation: fadeUp .35s ease forwards; }
+
+/* ── Cards ───────────────────────── */
+.cdna-card {
+  background: #fff;
+  border: 1.5px solid #e8e0d0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(26,18,8,.06), 0 8px 24px rgba(26,18,8,.05);
+  transition: box-shadow .2s, transform .2s;
+}
+.cdna-card:hover {
+  box-shadow: 0 4px 12px rgba(26,18,8,.08), 0 16px 40px rgba(26,18,8,.07);
+}
+.cdna-card-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* ── Buttons ─────────────────────── */
+.btn-primary {
+  background: #d4500f;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 24px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .18s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 14px;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.btn-primary:hover { background: #b83d0a; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-outline {
+  background: transparent;
+  color: #4a3f30;
+  border: 1.5px solid #e8e0d0;
+  border-radius: 12px;
+  padding: 11px 22px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all .18s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+}
+.btn-outline:hover { border-color: #d4c9b5; background: #faf8f3; }
+
+.btn-ghost {
+  background: transparent;
+  color: #4a3f30;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all .15s;
+  min-height: 36px;
+}
+.btn-ghost:hover { background: #faf8f3; color: #1a1208; }
+
+.btn-sm { padding: 8px 16px !important; font-size: 13px !important; min-height: 36px !important; border-radius: 9px !important; }
+.btn-lg { padding: 15px 32px !important; font-size: 16px !important; min-height: 52px !important; }
+.btn-full { width: 100%; }
+.btn-danger { background: #fdecea; color: #c0392b; border: 1.5px solid rgba(192,57,43,.25); border-radius: 9px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
+.btn-danger:hover { background: #c0392b; color: #fff; }
+
+/* ── Form elements ───────────────── */
+.field { margin-bottom: 16px; }
+.field > label { display: block; font-size: 13px; font-weight: 600; color: #4a3f30; margin-bottom: 6px; }
+
+.input-wrap { position: relative; }
+.input-wrap > span.ico { position: absolute; top: 50%; left: 13px; transform: translateY(-50%); width: 18px; height: 18px; pointer-events: none; z-index: 2; opacity: .45; }
+.ico-user  { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 3.6-7 8-7s8 3 8 7'/%3E%3C/svg%3E") center/contain no-repeat; }
+.ico-mail  { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M3 7l9 7 9-7'/%3E%3C/svg%3E") center/contain no-repeat; }
+.ico-lock  { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 018 0v4'/%3E%3C/svg%3E") center/contain no-repeat; }
+.ico-phone { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='7' y='2' width='10' height='20' rx='3'/%3E%3Ccircle cx='12' cy='18' r='1' fill='%23000'/%3E%3C/svg%3E") center/contain no-repeat; }
+.ico-key   { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15' r='4'/%3E%3Cpath d='M12 11l8-8m0 0v4m0-4h-4'/%3E%3C/svg%3E") center/contain no-repeat; }
+
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  width: 100%;
+  background: #faf8f3;
+  border: 1.5px solid #e8e0d0;
+  color: #1a1208;
+  font-family: inherit;
+  font-size: max(16px, 1em);
+  padding: 12px 14px;
+  border-radius: 12px;
+  outline: none;
+  transition: all .2s;
+  -webkit-appearance: none;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus {
+  border-color: #d4500f;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(212,80,15,.12);
+}
+input[type="checkbox"] {
+  width: 18px; height: 18px;
+  accent-color: #d4500f;
+  cursor: pointer; flex-shrink: 0;
+}
+input::placeholder { color: #8c7d6a; }
+.has-icon input { padding-left: 46px; }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7d6a' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+/* ── Toast ───────────────────────── */
+#toast {
+  position: fixed;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.toast-item {
+  background: #1a1208;
+  color: #fffef9;
+  padding: 11px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: popIn .25s ease forwards;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  max-width: 90vw;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+.toast-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Mobile menu ─────────────────── */
+#mobile-menu {
+  display: none;
+  position: fixed;
+  top: 64px;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  background: rgba(255,254,249,.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #e8e0d0;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  animation: slideDown .2s ease;
+}
+#mobile-menu.open { display: block; }
+.mm-item {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 13px 14px;
+  border-radius: 12px;
+  font-size: 15px; font-weight: 500; color: #4a3f30;
+  cursor: pointer; background: none; border: none;
+  transition: all .15s; min-height: 48px; text-align: left;
+  font-family: inherit;
+}
+.mm-item:hover { background: #faf8f3; color: #1a1208; }
+.mm-div { height: 1px; background: #e8e0d0; margin: 8px 0; }
+
+/* ── Step dots ───────────────────── */
+.step-dot {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  transition: all .3s;
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+.step-line { flex: 1; height: 2px; transition: background .3s; }
+
+/* ── Auth tabs ───────────────────── */
+.auth-tabs { display: flex; background: #faf8f3; border-radius: 12px; padding: 4px; margin-bottom: 24px; }
+.auth-tab {
+  flex: 1; padding: 9px; text-align: center; font-size: 14px; font-weight: 600;
+  border-radius: 9px; cursor: pointer; transition: all .2s;
+  color: #8c7d6a; border: none; background: none; font-family: inherit;
+}
+.auth-tab.active { background: #fff; color: #1a1208; box-shadow: 0 1px 3px rgba(26,18,8,.1); }
+
+/* ── Score arc ───────────────────── */
+.score-arc-fill {
+  stroke-dasharray: 502;
+  stroke-dashoffset: 502;
+  transition: stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Progress bar ────────────────── */
+.progress-bar { height: 8px; background: #f5f0e8; border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+
+/* ── Badges ──────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; padding: 4px 12px;
+  border-radius: 999px;
+}
+.badge-accent { background: #fff0e8; color: #d4500f; border: 1px solid rgba(212,80,15,.3); }
+.badge-green  { background: #e8f5ef; color: #0f7e5a; }
+.badge-blue   { background: #e8f0fb; color: #1d5fa8; }
+.badge-gold   { background: #fff8e6; color: #b45309; border: 1px solid rgba(180,83,9,.2); }
+
+/* ── Nav link ────────────────────── */
+.nav-link {
+  font-size: 14px; font-weight: 500; color: #4a3f30;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer;
+  border: none; background: none; transition: all .15s;
+  min-height: 36px; font-family: inherit;
+}
+.nav-link:hover, .nav-link.active { background: #faf8f3; color: #1a1208; }
+
+/* ── Three.js canvas ─────────────── */
+#dna-canvas {
+  position: absolute;
+  top: 0; right: 0;
+  width: 50%;
+  height: 100%;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  #dna-canvas { display: none; }
+}
+
+/* ── Hero blob ───────────────────── */
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+/* ── Auth page layout ────────────── */
+.auth-page { min-height: calc(100vh - 64px); display: grid; grid-template-columns: 1fr 1fr; }
+.auth-left { background: #1a1208; padding: 48px; display: flex; flex-direction: column; justify-content: space-between; }
+.auth-right { padding: 48px clamp(24px,5vw,56px); display: flex; flex-direction: column; justify-content: center; overflow-y: auto; max-height: calc(100vh - 64px); }
+@media (max-width: 900px) {
+  .auth-page { grid-template-columns: 1fr; min-height: auto; }
+  .auth-left  { display: none; }
+  .auth-right { padding: 32px 20px 40px; justify-content: flex-start; min-height: calc(100vh - 64px); }
+}
+
+/* ── Dashboard grid ──────────────── */
+.db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) {
+  .db-grid { grid-template-columns: 1fr; }
+  .ag { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 480px) {
+  .ag { grid-template-columns: 1fr !important; }
+  .step-dot { width: 26px; height: 26px; font-size: 11px; }
+}
+
+/* ── Txn item ────────────────────── */
+.txn-ico { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+
+/* ── Msg states ──────────────────── */
+.msg-err { background: #fdecea; border: 1px solid rgba(192,57,43,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: #c0392b; font-size: 13px; font-weight: 500; }
+.msg-ok  { background: #e8f5ef; border: 1px solid rgba(15,126,90,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: #0f7e5a; font-size: 13px; font-weight: 500; }
+
+/* ── Pricing cards ───────────────── */
+.plan-popular { border-color: #d4500f !important; position: relative; }
+.plan-popular::before { content: 'Most Popular'; position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: #d4500f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 4px 14px; border-radius: 0 0 10px 10px; }
+
+/* ── User avatar ─────────────────── */
+.user-avatar { width: 34px; height: 34px; border-radius: 10px; background: #fff0e8; border: 1.5px solid rgba(212,80,15,.3); display: flex; align-items: center; justify-content: center; font-family: 'Bricolage Grotesque', sans-serif; font-size: 14px; font-weight: 800; color: #d4500f; flex-shrink: 0; }
+
+/* ── Label ───────────────────────── */
+.label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8c7d6a; margin-bottom: 6px; display: block; }
+
+/* ── Section spacing ─────────────── */
+.section { padding: 80px 0; }
+.section-sm { padding: 56px 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(16px,4vw,32px); }
+
+@media (max-width: 768px) {
+  .section { padding: 56px 0; }
+  .section-sm { padding: 40px 0; }
+}
+
+/* ── Grid helpers ────────────────── */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 18px; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 16px; }
+@media (max-width: 480px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: 1fr; } }
+
+/* ── Score display ───────────────── */
+.score-display { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; line-height: 1; }
+
+/* ── Role card ───────────────────── */
+.role-card { border: 2px solid #e8e0d0; border-radius: 14px; padding: 18px; cursor: pointer; transition: all .2s; position: relative; text-align: center; }
+.role-card:hover { border-color: rgba(212,80,15,.4); background: #fff0e8; }
+.role-card.selected { border-color: #d4500f; background: #fff0e8; }
+.role-card .rc-check { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #e8e0d0; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: transparent; transition: all .2s; }
+.role-card.selected .rc-check { background: #d4500f; border-color: #d4500f; color: #fff; }
+
+</style>
+</head>
+<body class="bg-[#fffef9] font-body text-ink antialiased overflow-x-hidden">
+
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 h-16 flex items-center border-b border-[#e8e0d0] nav-glass">
+  <div class="w-full max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
+    <div id="logo-btn" class="flex items-center gap-3 cursor-pointer flex-shrink-0">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <rect width="36" height="36" rx="8" fill="#0a1f0a"/>
+        <g stroke="#22c55e" stroke-width="1.8" stroke-linecap="round">
+          <line x1="9" y1="12" x2="27" y2="12"/>
+          <line x1="9" y1="12" x2="9" y2="16"/><line x1="27" y1="12" x2="27" y2="16"/>
+          <line x1="9" y1="16" x2="27" y2="16" opacity=".85"/>
+          <line x1="9" y1="16" x2="9" y2="20"/><line x1="27" y1="16" x2="27" y2="20"/>
+          <line x1="9" y1="20" x2="27" y2="20" opacity=".65"/>
+          <line x1="9" y1="20" x2="9" y2="24"/><line x1="27" y1="20" x2="27" y2="24"/>
+          <line x1="9" y1="24" x2="27" y2="24" opacity=".45"/>
+        </g>
+      </svg>
+      <div class="flex flex-col leading-none">
+        <span class="font-display font-bold text-[17px] text-[#22c55e] tracking-tight">Credit<span class="opacity-80">DNA</span></span>
+        <span class="text-[7.5px] font-semibold tracking-[0.18em] text-[#22c55e] opacity-50 mt-0.5">YOUR CREDIT. YOUR DATA.</span>
+      </div>
+    </div>
+    <div id="nav-links" class="hidden md:flex items-center gap-1"></div>
+    <div class="flex items-center gap-2">
+      <button id="hb" onclick="window._toggleMM()" aria-label="Menu"
+        class="md:hidden flex flex-col items-center justify-center gap-[5px] w-10 h-10 rounded-xl bg-[#faf8f3] border border-[#e8e0d0] flex-shrink-0">
+        <span class="block w-4 h-[1.5px] bg-[#1a1208] rounded"></span>
+        <span class="block w-4 h-[1.5px] bg-[#1a1208] rounded"></span>
+        <span class="block w-4 h-[1.5px] bg-[#1a1208] rounded"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="mobile-menu"></div>
+<div id="toast"></div>
+<main id="app" class="pt-16 min-h-screen"></main>
+
+<script>
+/**
+ * @fileoverview CreditDNA configuration constants
+ */
+
+/** @type {string[]} Admin email list */
+const ADMIN_EMAILS = [
+  'simon@creditdna.in',
+  'mayank@creditdna.in',
+  'varsha@creditdna.in',
+  'deva@creditdna.in',
+  'admin@creditdna.in',
+];
+
+/** Admin portal secret key */
+const ADMIN_KEY = 'CDNA2025';
+
+/**
+ * @typedef {Object} Transaction
+ * @property {string} id
+ * @property {string} date
+ * @property {string} merchant
+ * @property {string} cat
+ * @property {number} amt
+ * @property {boolean} credit
+ * @property {string} upi
+ * @property {string} ico
+ */
+
+/** @type {Transaction[]} Demo transaction data */
+const MOCK_TXN = [
+  { id:'T1',  date:'14 Mar', merchant:'Swiggy',            cat:'Food',       amt:-340,  credit:false, upi:'swiggy@icici',  ico:'🍔' },
+  { id:'T2',  date:'13 Mar', merchant:'BESCOM Electricity', cat:'Utilities',  amt:-1240, credit:false, upi:'bescom@sbi',    ico:'⚡' },
+  { id:'T3',  date:'13 Mar', merchant:'Salary Credit',      cat:'Income',     amt:25000, credit:true,  upi:'employer@hdfc', ico:'💰' },
+  { id:'T4',  date:'12 Mar', merchant:'Zomato',             cat:'Food',       amt:-280,  credit:false, upi:'zomato@kotak',  ico:'🍕' },
+  { id:'T5',  date:'11 Mar', merchant:'DMart',              cat:'Groceries',  amt:-1850, credit:false, upi:'dmart@axis',    ico:'🛒' },
+  { id:'T6',  date:'10 Mar', merchant:'Airtel Recharge',    cat:'Utilities',  amt:-399,  credit:false, upi:'airtel@airtel', ico:'📱' },
+  { id:'T7',  date:'09 Mar', merchant:'Rapido',             cat:'Transport',  amt:-95,   credit:false, upi:'rapido@ybl',    ico:'🛵' },
+  { id:'T8',  date:'08 Mar', merchant:'Freelance Payment',  cat:'Income',     amt:5000,  credit:true,  upi:'client@paytm',  ico:'💼' },
+  { id:'T9',  date:'07 Mar', merchant:'Amazon',             cat:'Shopping',   amt:-1299, credit:false, upi:'amazon@apl',    ico:'📦' },
+  { id:'T10', date:'06 Mar', merchant:'BWSSB Water Bill',   cat:'Utilities',  amt:-480,  credit:false, upi:'bwssb@sbi',     ico:'💧' },
+  { id:'T11', date:'05 Mar', merchant:'Ola Auto',           cat:'Transport',  amt:-65,   credit:false, upi:'ola@ola',       ico:'🚗' },
+  { id:'T12', date:'04 Mar', merchant:'Jio Recharge',       cat:'Utilities',  amt:-299,  credit:false, upi:'jio@jio',       ico:'📶' },
+];
+
+/** Occupation labels */
+const OCC_LABELS = {
+  gig:      'Gig Worker',
+  farmer:   'Farmer',
+  student:  'Student',
+  sme:      'Business Owner',
+  daily:    'Daily Wage Worker',
+  freelance:'Freelancer',
+  salaried: 'Salaried Employee',
+  other:    'Other',
+};
+
+/**
+ * Score colour helper
+ * @param {number|null} s
+ * @returns {string}
+ */
+const scoreColor = s =>
+  !s ? '#8c7d6a' : s >= 750 ? '#0f7e5a' : s >= 650 ? '#0d7c52' : s >= 550 ? '#d4500f' : '#c0392b';
+
+/**
+ * Score tier label
+ * @param {number|null} s
+ * @returns {string}
+ */
+const scoreTier = s =>
+  !s ? '—' : s >= 750 ? 'Very Good' : s >= 650 ? 'Good' : s >= 550 ? 'Fair' : 'Poor';
+
+/**
+ * Score percentage (300–900 range)
+ * @param {number|null} s
+ * @returns {number}
+ */
+const scorePct = s => !s ? 0 : ((s - 300) / 600 * 100);
+
+/**
+ * Format Indian currency amount
+ * @param {number} n
+ * @returns {string}
+ */
+const fmtAmt = n =>
+  n > 0
+    ? `+₹${n.toLocaleString('en-IN')}`
+    : `−₹${Math.abs(n).toLocaleString('en-IN')}`;
+
+/**
+ * Check if user is admin
+ * @param {{email:string}|null} u
+ * @returns {boolean}
+ */
+const isAdmin = u => !!(u && ADMIN_EMAILS.includes((u.email || '').toLowerCase()));
+
+/**
+ * @fileoverview CreditDNA localStorage database layer
+ */
+
+/**
+ * @typedef {Object} User
+ * @property {number}  id
+ * @property {string}  name
+ * @property {string}  email
+ * @property {string}  password
+ * @property {string}  phone
+ * @property {string}  occ
+ * @property {string}  txn
+ * @property {string}  upiApp
+ * @property {boolean} isAdmin
+ * @property {number|null} score
+ * @property {string}  joined
+ */
+
+const KEYS = {
+  USERS: 'cdna_users',
+  ME:    'cdna_me',
+};
+
+const DB = {
+  /** @returns {User[]} */
+  users: () => {
+    try { return JSON.parse(localStorage.getItem(KEYS.USERS) || '[]'); }
+    catch { return []; }
+  },
+
+  /** @param {User[]} u */
+  save: u => localStorage.setItem(KEYS.USERS, JSON.stringify(u)),
+
+  /** @returns {User|null} */
+  me: () => {
+    try { return JSON.parse(localStorage.getItem(KEYS.ME) || 'null'); }
+    catch { return null; }
+  },
+
+  /** @param {User} u */
+  setMe: u => localStorage.setItem(KEYS.ME, JSON.stringify(u)),
+
+  logout: () => localStorage.removeItem(KEYS.ME),
+
+  /**
+   * Find user by email
+   * @param {string} email
+   * @returns {User|undefined}
+   */
+  findByEmail: email =>
+    DB.users().find(u => u.email.toLowerCase() === email.toLowerCase()),
+
+  /**
+   * Update a user record
+   * @param {Partial<User> & {id:number}} patch
+   */
+  updateUser: patch => {
+    const users = DB.users();
+    const i = users.findIndex(u => u.id === patch.id);
+    if (i > -1) {
+      users[i] = { ...users[i], ...patch };
+      DB.save(users);
+      // If this is the current user, update session
+      const me = DB.me();
+      if (me && me.id === patch.id) DB.setMe(users[i]);
+      return users[i];
+    }
+    return null;
+  },
+
+  /**
+   * Delete a user by id
+   * @param {number} id
+   */
+  deleteUser: id => {
+    const users = DB.users().filter(u => u.id !== id);
+    DB.save(users);
+  },
+};
+
+/**
+ * @fileoverview Toast notification system
+ * @param {string} msg
+ * @param {'ok'|'err'|'info'} [type]
+ */
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  if (!el) return;
+
+  const colors = { ok: '#0f7e5a', err: '#c0392b', info: '#d4500f' };
+  const color  = colors[type] || colors.info;
+
+  const item = document.createElement('div');
+  item.className = 'toast-item';
+  item.innerHTML = `<span class="toast-dot" style="background:${color}"></span>${msg}`;
+  el.appendChild(item);
+
+  setTimeout(() => {
+    item.style.opacity = '0';
+    item.style.transition = 'opacity .3s';
+    setTimeout(() => item.remove(), 300);
+  }, 3000);
+}
+
+
+
+
+/**
+ * @typedef {import('./db.js').User} User
+ */
+
+/**
+ * Attempt login
+ * @param {string} email
+ * @param {string} password
+ * @returns {User|null}
+ */
+function doLogin(email, password) {
+  const user = DB.findByEmail(email);
+  if (!user || user.password !== password) return null;
+  DB.setMe(user);
+  return user;
+}
+
+/**
+ * Register a new user
+ * @param {{name:string, email:string, password:string, phone:string, occ:string, txn:string, upiApp:string}} data
+ * @returns {User|false}
+ */
+function doRegister(data) {
+  if (DB.findByEmail(data.email)) {
+    toast('This email is already registered', 'err');
+    return false;
+  }
+
+  const isAdm = ADMIN_EMAILS.includes(data.email.toLowerCase());
+
+  /** @type {User} */
+  const user = {
+    id:      Date.now(),
+    name:    data.name,
+    email:   data.email.toLowerCase(),
+    password:data.password,
+    phone:   data.phone || '',
+    occ:     data.occ,
+    txn:     data.txn,
+    upiApp:  data.upiApp,
+    isAdmin: isAdm,
+    score:   null,
+    joined:  new Date().toISOString(),
+  };
+
+  const users = DB.users();
+  users.push(user);
+  DB.save(users);
+  DB.setMe(user);
+
+  toast(isAdm ? '👑 Admin account created!' : '🎉 Welcome to CreditDNA!', 'ok');
+  return user;
+}
+
+/**
+ * Logout current user
+ */
+function doLogout() {
+  DB.logout();
+  toast('See you soon!', 'info');
+}
+
+/**
+ * @fileoverview Three.js DNA double helix animation for hero section
+ */
+
+/** @type {any} */
+const THREE = window.THREE;
+
+/**
+ * Initialize and render a DNA double helix in the given canvas element
+ * @param {HTMLCanvasElement} canvas
+ * @returns {{ dispose: () => void }}
+ */
+function initDNA(canvas) {
+  if (!THREE) { console.warn('Three.js not loaded'); return { dispose: () => {} }; }
+
+  // ── Scene setup ────────────────────────────────────
+  const scene    = new THREE.Scene();
+  const W = canvas.clientWidth  || canvas.offsetWidth  || 400;
+  const H = canvas.clientHeight || canvas.offsetHeight || 600;
+  const camera   = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+  camera.position.set(0, 0, 7);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000000, 0);
+
+  // ── Lighting ───────────────────────────────────────
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+  const ptLight1 = new THREE.PointLight(0x22c55e, 2, 20);
+  ptLight1.position.set(3, 3, 3);
+  scene.add(ptLight1);
+
+  const ptLight2 = new THREE.PointLight(0x16a34a, 1.5, 20);
+  ptLight2.position.set(-3, -3, 2);
+  scene.add(ptLight2);
+
+  const ptLight3 = new THREE.PointLight(0xd4500f, 0.8, 15);
+  ptLight3.position.set(0, 0, 5);
+  scene.add(ptLight3);
+
+  // ── Materials ──────────────────────────────────────
+  const strandMat = new THREE.MeshPhongMaterial({
+    color:     0x22c55e,
+    emissive:  0x0a3d1a,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const strandMat2 = new THREE.MeshPhongMaterial({
+    color:     0x16a34a,
+    emissive:  0x061f0d,
+    shininess: 80,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const pairMat = new THREE.MeshPhongMaterial({
+    color:     0x4ade80,
+    emissive:  0x052e16,
+    transparent: true,
+    opacity: 0.6,
+  });
+  const accentMat = new THREE.MeshPhongMaterial({
+    color:     0xd4500f,
+    emissive:  0x3d1503,
+    transparent: true,
+    opacity: 0.7,
+  });
+
+  // ── DNA Geometry ───────────────────────────────────
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const TURNS   = 3.5;   // number of helix turns
+  const HEIGHT  = 5.5;   // total height
+  const RADIUS  = 1.2;   // helix radius
+  const STEPS   = 80;    // smoothness of helix
+  const PAIRS   = 14;    // number of base pairs
+
+  // Strand sphere radius
+  const SR = 0.07;
+  const sphereGeo = new THREE.SphereGeometry(SR, 8, 8);
+
+  // Build two strands
+  for (let s = 0; s < 2; s++) {
+    const phaseOffset = s === 0 ? 0 : Math.PI;
+    const mat = s === 0 ? strandMat : strandMat2;
+
+    for (let i = 0; i <= STEPS; i++) {
+      const t     = i / STEPS;
+      const angle = t * TURNS * Math.PI * 2 + phaseOffset;
+      const y     = t * HEIGHT - HEIGHT / 2;
+      const x     = Math.cos(angle) * RADIUS;
+      const z     = Math.sin(angle) * RADIUS;
+
+      const mesh = new THREE.Mesh(sphereGeo, mat);
+      mesh.position.set(x, y, z);
+      // Vary size slightly for organic feel
+      const scale = 0.8 + 0.4 * Math.sin(t * Math.PI * 6);
+      mesh.scale.setScalar(scale);
+      group.add(mesh);
+    }
+  }
+
+  // Base pairs (rungs of the ladder)
+  const pairGeo = new THREE.CylinderGeometry(0.04, 0.04, RADIUS * 2, 6);
+  for (let p = 0; p < PAIRS; p++) {
+    const t     = p / (PAIRS - 1);
+    const angle = t * TURNS * Math.PI * 2;
+    const y     = t * HEIGHT - HEIGHT / 2;
+    const x1    = Math.cos(angle) * RADIUS;
+    const z1    = Math.sin(angle) * RADIUS;
+    const x2    = Math.cos(angle + Math.PI) * RADIUS;
+    const z2    = Math.sin(angle + Math.PI) * RADIUS;
+
+    const midX = (x1 + x2) / 2;
+    const midZ = (z1 + z2) / 2;
+
+    const mat = p % 3 === 0 ? accentMat : pairMat;
+    const pair = new THREE.Mesh(pairGeo, mat);
+    pair.position.set(midX, y, midZ);
+    // Rotate cylinder to lie horizontal, pointing in the helix direction
+    pair.rotation.z = Math.PI / 2;
+    pair.rotation.y = angle;
+    group.add(pair);
+
+    // Small spheres at pair endpoints (nucleotides)
+    const nGeo = new THREE.SphereGeometry(0.1, 8, 8);
+    [[ x1, z1 ], [ x2, z2 ]].forEach(([nx, nz]) => {
+      const n = new THREE.Mesh(nGeo, p % 3 === 0 ? accentMat : pairMat);
+      n.position.set(nx, y, nz);
+      group.add(n);
+    });
+  }
+
+  // ── Particle cloud ─────────────────────────────────
+  const particleCount = 120;
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3]     = (Math.random() - 0.5) * 5;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 7;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 3;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const pMat = new THREE.PointsMaterial({ color: 0x22c55e, size: 0.04, transparent: true, opacity: 0.5 });
+  scene.add(new THREE.Points(pGeo, pMat));
+
+  // ── Mouse parallax ─────────────────────────────────
+  let mouseX = 0, mouseY = 0;
+  const onMouse = (/** @type {MouseEvent} */ e) => {
+    mouseX = (e.clientX / window.innerWidth  - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  };
+  window.addEventListener('mousemove', onMouse);
+
+  // ── Resize handler ─────────────────────────────────
+  const onResize = () => {
+    const w = canvas.clientWidth  || canvas.offsetWidth  || 400;
+    const h = canvas.clientHeight || canvas.offsetHeight || 600;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  };
+  window.addEventListener('resize', onResize);
+
+  // ── Animation loop ─────────────────────────────────
+  let running = true;
+  let raf = 0;
+
+  const animate = () => {
+    if (!running) return;
+    raf = requestAnimationFrame(animate);
+
+    const t = performance.now() * 0.001;
+    group.rotation.y  = t * 0.35 + mouseX * 0.3;
+    group.rotation.x  = mouseY * 0.15;
+    group.position.y  = Math.sin(t * 0.4) * 0.08;
+
+    // Pulsing light
+    ptLight1.intensity = 2 + Math.sin(t * 1.5) * 0.5;
+
+    renderer.render(scene, camera);
+  };
+  animate();
+
+  return {
+    dispose: () => {
+      running = false;
+      cancelAnimationFrame(raf);
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('resize', onResize);
+      renderer.dispose();
+    }
+  };
+}
+
+
+/** @type {{ dispose: () => void } | null} */
+let dnaInstance = null;
+
+/**
+ * Render the landing page
+ * @param {Function} go
+ */
+function renderLanding(go) {
+  if (dnaInstance) { dnaInstance.dispose(); dnaInstance = null; }
+
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter">
+
+    <!-- HERO -->
+    <section class="relative overflow-hidden" style="padding: clamp(72px,10vw,110px) 0 80px; min-height: 88vh; display:flex; align-items:center;">
+      <div class="hero-blob" style="width:500px;height:500px;background:radial-gradient(circle,rgba(212,80,15,.10) 0%,transparent 70%);top:-80px;right:-60px;"></div>
+      <div class="hero-blob" style="width:300px;height:300px;background:radial-gradient(circle,rgba(34,197,94,.07) 0%,transparent 70%);bottom:40px;left:-40px;"></div>
+
+      <canvas id="dna-canvas"></canvas>
+
+      <div class="wrap w-full">
+        <div style="max-width:580px">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="badge badge-accent">🇮🇳 Built for Unbanked India</span>
+            <span class="badge badge-green">500M+ addressable users</span>
+          </div>
+          <h1 class="font-display font-extrabold text-ink leading-[1.08] tracking-tight mb-6"
+              style="font-size:clamp(38px,6vw,72px);">
+            Credit for<br>
+            <span style="color:#d4500f">everyone</span><br>
+            who uses UPI
+          </h1>
+          <p class="text-[#4a3f30] leading-relaxed mb-10" style="font-size:clamp(15px,2vw,19px); max-width:480px;">
+            Your UPI transaction history is rich financial data. We turn it into a 300–900 score —
+            processed <strong>on your device</strong>, never shared raw.
+          </p>
+          <div class="flex flex-wrap gap-4 hero-ctas">
+            <button class="btn-primary btn-lg" onclick="window._go('register')">
+              Get Your Score Free →
+            </button>
+            <button class="btn-outline btn-lg" onclick="window._go('how')">
+              How It Works
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-6 mt-10 text-sm text-[#8c7d6a]">
+            <span class="flex items-center gap-2"><span class="text-[#0f7e5a] font-bold">✓</span> No bank account needed</span>
+            <span class="flex items-center gap-2"><span class="text-[#0f7e5a] font-bold">✓</span> 100% on-device</span>
+            <span class="flex items-center gap-2"><span class="text-[#0f7e5a] font-bold">✓</span> Free for individuals</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS RIBBON -->
+    <section style="background:#1a1208; padding:40px 0;">
+      <div class="wrap">
+        <div class="grid-4" style="text-align:center; gap:24px;">
+          ${[['500M+','Unbanked Indians'],['50+','UPI Signals Analysed'],['300–900','Score Range'],['<200ms','Score Generation']].map(([n,l]) => `
+          <div>
+            <div class="font-display font-extrabold text-[#22c55e]" style="font-size:clamp(28px,4vw,40px);">${n}</div>
+            <div style="font-size:13px; color:rgba(250,246,236,.5); margin-top:4px;">${l}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="section" style="background:#fffef9;">
+      <div class="wrap">
+        <div class="grid-2" style="align-items:center; gap:56px;">
+          <div>
+            <span class="label">The Problem</span>
+            <h2 class="font-display font-extrabold text-ink mb-6" style="font-size:clamp(26px,4vw,42px); line-height:1.1;">
+              500 million Indians are <span style="color:#d4500f">invisible</span> to banks
+            </h2>
+            <p class="text-[#4a3f30] leading-relaxed mb-6" style="font-size:15px;">
+              Not because they're poor — but because banks have <em>no data</em> on them.
+              Gig workers, farmers, students and micro-entrepreneurs transact actively via UPI every day
+              but are completely shut out of formal credit.
+            </p>
+            <p class="text-[#4a3f30] leading-relaxed" style="font-size:15px;">
+              The CIBIL score was designed for bank customers. <strong>CreditDNA was designed for everyone else.</strong>
+            </p>
+          </div>
+          <div class="grid-2" style="gap:16px;">
+            ${[['🚫','No CIBIL Score','Even with years of steady income and payments'],
+               ['📵','No Bank History','UPI-first users leave no traditional paper trail'],
+               ['💸','No Access','₹2.4L crore in credit demand goes unfulfilled'],
+               ['🔄','Stuck in a Loop','Can\'t get credit without history, no history without credit']
+              ].map(([i,t,d]) => `
+            <div class="cdna-card" style="padding:20px;">
+              <div style="font-size:26px; margin-bottom:10px;">${i}</div>
+              <div class="font-display font-bold text-ink mb-2" style="font-size:15px;">${t}</div>
+              <div style="font-size:13px; color:#8c7d6a; line-height:1.6;">${d}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section" style="background:#faf8f3;">
+      <div class="wrap" style="text-align:center;">
+        <span class="label">How It Works</span>
+        <h2 class="font-display font-extrabold text-ink mb-4" style="font-size:clamp(26px,4vw,42px); line-height:1.1;">
+          Four steps to your score
+        </h2>
+        <p class="text-[#4a3f30] mb-14" style="font-size:15px; max-width:520px; margin-left:auto; margin-right:auto;">
+          From raw UPI history to a bankable credit score — entirely on your device, in under 200ms.
+        </p>
+        <div class="grid-4" style="text-align:left; position:relative;">
+          ${[['01','#d4500f','Consent','You grant permission','Your UPI data loads into an on-device pipeline. DPDP Act compliant. Raw data never uploaded.'],
+             ['02','#0f7e5a','Feature Engineering','50+ signals extracted','Transaction frequency, regularity, merchant diversity, income consistency — all analysed locally.'],
+             ['03','#1d5fa8','ML Scoring','On-device model runs','A lightweight ML model converts your behavioural signals into a 300–900 score in milliseconds.'],
+             ['04','#b45309','Bank API','Score shared, not data','Lenders call our REST API. They receive your score + tier. Raw transactions are architecturally inaccessible.'],
+            ].map(([num,c,t,sub,d]) => `
+          <div class="cdna-card cdna-card-lift" style="padding:24px; border-top:3px solid ${c};">
+            <div class="font-display font-extrabold mb-3" style="font-size:32px; color:${c}; opacity:.25;">${num}</div>
+            <div style="font-size:11px; font-weight:700; letter-spacing:.1em; color:${c}; margin-bottom:6px; text-transform:uppercase;">${sub}</div>
+            <div class="font-display font-bold text-ink mb-2" style="font-size:18px;">${t}</div>
+            <div style="font-size:13px; color:#8c7d6a; line-height:1.65;">${d}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- RAVI DEMO -->
+    <section class="section" style="background:#fffef9;">
+      <div class="wrap">
+        <div class="grid-2" style="align-items:center; gap:64px;">
+          <div>
+            <span class="label">Real-World Example</span>
+            <h2 class="font-display font-extrabold text-ink mb-4" style="font-size:clamp(24px,3.5vw,38px); line-height:1.1;">
+              Meet Ravi — Swiggy delivery partner
+            </h2>
+            <p class="text-[#4a3f30] leading-relaxed mb-6" style="font-size:15px;">
+              Ravi earns ₹22,000/month via Swiggy + weekend gigs. He's been using UPI for 3 years, pays his Jio bill every month,
+              and buys groceries at DMart weekly. No salary slip. No bank statement. <strong>Zero CIBIL history.</strong>
+            </p>
+            <div class="cdna-card" style="padding:24px; margin-bottom:16px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <div>
+                  <div class="font-display font-bold text-ink" style="font-size:16px;">Ravi Kumar's CreditDNA Score</div>
+                  <div style="font-size:13px; color:#8c7d6a;">Generated from 6 months of UPI history</div>
+                </div>
+                <div class="font-display font-extrabold" style="font-size:44px; color:#0f7e5a;">724</div>
+              </div>
+              <div class="progress-bar" style="margin-bottom:8px;">
+                <div class="progress-fill" style="width:70.6%; background:#0f7e5a;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; color:#8c7d6a;">
+                <span>300 — Poor</span><span class="badge badge-green" style="font-size:11px;">Good</span><span>900 — Excellent</span>
+              </div>
+            </div>
+            <button class="btn-primary" onclick="window._go('check')">Try the Score Simulator →</button>
+          </div>
+          <div class="grid-2" style="gap:14px;">
+            ${[['💳','Payment Regularity','94/100','Pays utilities every month without fail'],
+               ['📈','Income Stability','81/100','Consistent Swiggy credits + side income'],
+               ['🏪','Merchant Diversity','88/100','8+ different spend categories'],
+               ['🔗','UPI Tenure','76/100','3+ years of active UPI usage']
+              ].map(([i,t,v,d]) => `
+            <div class="cdna-card" style="padding:18px;">
+              <div style="font-size:22px; margin-bottom:8px;">${i}</div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+                <div style="font-size:13px; font-weight:600; color:#1a1208;">${t}</div>
+                <div class="font-display font-bold" style="color:#0f7e5a;">${v}</div>
+              </div>
+              <div style="font-size:12px; color:#8c7d6a;">${d}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section" style="background:#1a1208;">
+      <div class="wrap" style="text-align:center;">
+        <span class="label" style="color:rgba(250,246,236,.4);">Why CreditDNA</span>
+        <h2 class="font-display font-extrabold mb-14" style="font-size:clamp(26px,4vw,42px); color:#faf6ec; line-height:1.1;">
+          Built different, by design
+        </h2>
+        <div class="grid-3" style="text-align:left;">
+          ${[['🔒','Privacy by Architecture','Raw UPI data never leaves your device. Architecturally impossible — not just a privacy policy.','#d4500f'],
+             ['⚡','200ms Scoring','Lightweight on-device ML model. No round-trip to servers. Score generated before you blink.','#0f7e5a'],
+             ['🧬','50+ Behavioural Signals','Transaction frequency, regularity, income consistency, merchant diversity and 46 more.','#1d5fa8'],
+             ['📖','Plain-English Explanations','Every score comes with a human-readable breakdown. You know exactly why you got your score.','#b45309'],
+             ['🏦','Bank-Ready REST API','POST /api/score — lenders receive score + tier + factors. Zero raw data ever transmitted.','#0f7e5a'],
+             ['🌏','UPI-First Design','Works for every Indian with a UPI account. No salary slip, no bank account, no problem.','#d4500f'],
+            ].map(([i,t,d,c]) => `
+          <div class="cdna-card-lift" style="background:rgba(255,255,255,.05); border:1.5px solid rgba(255,250,235,.08); border-radius:16px; padding:24px; transition:all .2s;">
+            <div style="width:44px; height:44px; border-radius:12px; background:${c}20; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px;">${i}</div>
+            <div class="font-display font-bold mb-2" style="color:#faf6ec; font-size:17px;">${t}</div>
+            <div style="font-size:13px; color:rgba(250,246,236,.5); line-height:1.65;">${d}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section" style="background:#faf8f3; text-align:center;">
+      <div class="wrap" style="max-width:620px;">
+        <h2 class="font-display font-extrabold text-ink mb-4" style="font-size:clamp(28px,5vw,52px); line-height:1.05;">
+          Ready to build your credit story?
+        </h2>
+        <p class="text-[#4a3f30] mb-10" style="font-size:16px; max-width:460px; margin-left:auto; margin-right:auto;">
+          Join thousands of Indians who are already building their CreditDNA score. Free forever for individuals.
+        </p>
+        <button class="btn-primary btn-lg" onclick="window._go('register')">
+          Get Your Score Free →
+        </button>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer style="border-top:1px solid #e8e0d0; padding:28px clamp(16px,4vw,32px); text-align:center;">
+      <p style="font-size:13px; color:#8c7d6a;">CreditDNA © 2025 · BOTSQUAD · SRM IST · Chennai</p>
+    </footer>
+
+  </div>`;
+
+  // Boot Three.js DNA after DOM is ready
+  requestAnimationFrame(() => {
+    const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('dna-canvas'));
+    if (canvas && window.innerWidth > 768) {
+      dnaInstance = initDNA(canvas);
+    }
+    // Animate progress bar in Ravi demo
+    const fill = document.querySelector('.progress-fill');
+    if (fill) { fill.style.width = '0'; setTimeout(() => { fill.style.width = '70.6%'; }, 200); }
+  });
+}
+
+
+
+
+/** @type {'login'|'register'} */
+let authTab = 'login';
+let RS = 1;
+let RD = {};
+
+/**
+ * @param {Function} go
+ * @param {'login'|'register'} [tab]
+ */
+function renderLogin(go, tab = 'login') {
+  authTab = tab; RS = 1; RD = {};
+  _renderAuth(go);
+}
+
+function renderRegister(go) {
+  authTab = 'register'; RS = 1; RD = {};
+  _renderAuth(go);
+}
+
+function _renderAuth(go) {
+  document.getElementById('app').innerHTML = `
+  <div class="auth-page page-enter">
+    <div class="auth-left">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:40px;">
+          <div class="auth-logo-mark" style="width:38px;height:38px;border-radius:9px;background:#0a2a0a;border:1.5px solid rgba(34,197,94,.3);background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 36 36%22%3E%3Cg stroke=%2222c55e%22 stroke-width=%221.8%22 stroke-linecap=%22round%22%3E%3Cline x1=%229%22 y1=%2212%22 x2=%2227%22 y2=%2212%22/%3E%3Cline x1=%229%22 y1=%2212%22 x2=%229%22 y2=%2216%22/%3E%3Cline x1=%2227%22 y1=%2212%22 x2=%2227%22 y2=%2216%22/%3E%3Cline x1=%229%22 y1=%2216%22 x2=%2227%22 y2=%2216%22 opacity=%22.85%22/%3E%3Cline x1=%229%22 y1=%2216%22 x2=%229%22 y2=%2220%22/%3E%3Cline x1=%2227%22 y1=%2216%22 x2=%2227%22 y2=%2220%22/%3E%3Cline x1=%229%22 y1=%2220%22 x2=%2227%22 y2=%2220%22 opacity=%22.65%22/%3E%3Cline x1=%229%22 y1=%2220%22 x2=%229%22 y2=%2224%22/%3E%3Cline x1=%2227%22 y1=%2220%22 x2=%2227%22 y2=%2224%22/%3E%3Cline x1=%229%22 y1=%2224%22 x2=%2227%22 y2=%2224%22 opacity=%22.45%22/%3E%3C/g%3E%3C/svg%3E');background-repeat:no-repeat;background-position:center;background-size:28px;flex-shrink:0;"></div>
+          <div>
+            <div class="font-display font-extrabold text-[#22c55e]" style="font-size:20px;letter-spacing:-.01em;">CreditDNA</div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.18em;color:#22c55e;opacity:.5;margin-top:1px;">YOUR CREDIT. YOUR DATA.</div>
+          </div>
+        </div>
+        <h2 class="font-display font-extrabold mb-4" style="font-size:clamp(28px,3.5vw,40px);color:#faf6ec;line-height:1.1;letter-spacing:-.02em;">
+          Credit for everyone<br>who uses UPI
+        </h2>
+        <p style="font-size:15px;color:rgba(250,246,236,.55);line-height:1.75;margin-bottom:36px;">
+          Your UPI transaction history is rich financial data. We turn it into a 300–900 score — processed on your device, never shared raw.
+        </p>
+        ${[['🔒','Privacy first','Raw data never leaves your phone. Ever.'],
+           ['⚡','Instant results','Score generated in under 200ms.'],
+           ['🧬','50+ signals','More accurate than a single CIBIL number.']].map(([i,t,d]) => `
+        <div style="display:flex;gap:13px;margin-bottom:18px;">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(250,246,236,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">${i}</div>
+          <div><div style="font-size:14px;font-weight:700;color:#faf6ec;margin-bottom:2px;">${t}</div><div style="font-size:13px;color:rgba(250,246,236,.45);">${d}</div></div>
+        </div>`).join('')}
+      </div>
+      <div style="font-size:12px;color:rgba(250,246,236,.2);margin-top:24px;">BOTSQUAD · SRM IST · Chennai · © 2025</div>
+    </div>
+
+    <div class="auth-right" style="max-width:500px;width:100%;">
+      <div style="max-width:420px;width:100%;margin:0 auto;" class="page-enter">
+        <h1 class="font-display font-extrabold text-ink mb-2" style="font-size:clamp(22px,4vw,28px);letter-spacing:-.02em;">
+          ${authTab === 'login' ? 'Welcome back 👋' : 'Create your account'}
+        </h1>
+        <p style="font-size:14px;color:#8c7d6a;margin-bottom:24px;">
+          ${authTab === 'login' ? 'Sign in to your CreditDNA account' : 'Free for individuals · Takes 2 minutes'}
+        </p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab${authTab === 'login' ? ' active' : ''}" onclick="window._authSwitch('login')">Sign In</button>
+          <button class="auth-tab${authTab === 'register' ? ' active' : ''}" onclick="window._authSwitch('register')">Create Account</button>
+        </div>
+
+        <div id="auth-form"></div>
+
+        <p style="text-align:center;margin-top:18px;font-size:13px;color:#8c7d6a;">
+          ${authTab === 'login'
+            ? `Don't have an account? <span style="color:#d4500f;cursor:pointer;font-weight:600" onclick="window._authSwitch('register')">Sign up free</span>`
+            : `Already registered? <span style="color:#d4500f;cursor:pointer;font-weight:600" onclick="window._authSwitch('login')">Sign in</span>`}
+        </p>
+      </div>
+    </div>
+  </div>`;
+
+  window._authSwitch = (tab) => { authTab = tab; RS = 1; RD = {}; _renderAuth(go); };
+  window._authGo = go;
+  _renderAuthForm(go);
+}
+
+function _renderAuthForm(go) {
+  document.querySelectorAll('.auth-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && authTab === 'login') || (i === 1 && authTab === 'register'));
+  });
+  const wrap = document.getElementById('auth-form');
+  if (!wrap) return;
+  if (authTab === 'login') _renderLoginForm(wrap, go);
+  else _renderRegisterStep(wrap, go);
+}
+
+function _renderLoginForm(wrap, go) {
+  wrap.innerHTML = `
+    <div id="lerr"></div>
+    <div class="field"><label>Email Address</label>
+      <div class="input-wrap has-icon"><span class="ico ico-mail"></span>
+        <input id="l-email" type="email" placeholder="you@email.com" autocomplete="email">
+      </div>
+    </div>
+    <div class="field"><label>Password</label>
+      <div class="input-wrap has-icon"><span class="ico ico-lock"></span>
+        <input id="l-pass" type="password" placeholder="Your password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')window._loginSubmit()">
+      </div>
+    </div>
+    <button class="btn-primary btn-full btn-lg" style="margin-top:8px;border-radius:12px;" onclick="window._loginSubmit()">Sign In →</button>`;
+
+  window._loginSubmit = () => {
+    const email = document.getElementById('l-email').value.trim();
+    const pass  = document.getElementById('l-pass').value;
+    const err   = document.getElementById('lerr');
+    if (!email || !pass) { err.innerHTML = '<div class="msg-err">Please fill in all fields</div>'; return; }
+    const user = doLogin(email, pass);
+    if (!user) { err.innerHTML = '<div class="msg-err">Incorrect email or password</div>'; return; }
+    toast(`Welcome back, ${user.name.split(' ')[0]}! 👋`, 'ok');
+    if (isAdmin(user)) {
+      // Show admin portal prompt
+      err.innerHTML = `<div class="msg-ok">✅ Signed in! You have admin access — <a href="admin.html" style="color:#0f7e5a;font-weight:700;text-decoration:underline;">Open Admin Portal</a> or continue to dashboard.</div>`;
+      setTimeout(() => go('dashboard'), 2500);
+    } else {
+      go('dashboard');
+    }
+  };
+}
+
+function _renderRegisterStep(wrap, go) {
+  const steps = ['Your Info', 'About You', 'Consent'];
+  const dotRow = steps.map((s, i) => `
+    <div style="display:flex;align-items:center;flex:1;">
+      <div class="step-dot" style="background:${i+1<=RS?'#d4500f':'#faf8f3'};color:${i+1<=RS?'#fff':'#8c7d6a'};border:2px solid ${i+1<=RS?'#d4500f':'#e8e0d0'};box-shadow:${i+1===RS?'0 0 0 3px rgba(212,80,15,.15)':'none'};">
+        ${i+1 <= RS && RS > i+1 ? '✓' : i+1}
+      </div>
+      ${i < 2 ? `<div class="step-line" style="background:${i+1<RS?'#d4500f':'#e8e0d0'};"></div>` : ''}
+    </div>`).join('');
+
+  let fields = '';
+
+  if (RS === 1) fields = `
+    <div class="field"><label>Full Name *</label>
+      <div class="input-wrap has-icon"><span class="ico ico-user"></span>
+        <input id="r-name" value="${RD.name||''}" placeholder="e.g. Ravi Kumar" autocomplete="name">
+      </div>
+    </div>
+    <div class="field"><label>Email Address *</label>
+      <div class="input-wrap has-icon"><span class="ico ico-mail"></span>
+        <input id="r-email" type="email" value="${RD.email||''}" placeholder="you@email.com" autocomplete="email">
+      </div>
+    </div>
+    <div class="field"><label>Password *</label>
+      <div class="input-wrap has-icon"><span class="ico ico-lock"></span>
+        <input id="r-pass" type="password" value="${RD.pass||''}" placeholder="At least 6 characters" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="field"><label>Confirm Password *</label>
+      <div class="input-wrap has-icon"><span class="ico ico-lock"></span>
+        <input id="r-conf" type="password" value="${RD.conf||''}" placeholder="Repeat password" autocomplete="new-password">
+      </div>
+    </div>`;
+
+  else if (RS === 2) fields = `
+    <div class="field"><label>Phone Number</label>
+      <div class="input-wrap has-icon"><span class="ico ico-phone"></span>
+        <input id="r-phone" type="tel" value="${RD.phone||''}" placeholder="+91 00000 00000" autocomplete="tel">
+      </div>
+    </div>
+    <div class="field"><label>Occupation *</label>
+      <select id="r-occ">
+        <option value="">Select your occupation</option>
+        ${[['gig','Gig Worker (Swiggy, Zomato, Ola)'],['farmer','Farmer / Agricultural Worker'],['student','Student'],
+           ['sme','Small Business / SME Owner'],['daily','Daily Wage Worker'],['freelance','Freelancer / Self-Employed'],
+           ['salaried','Salaried Employee'],['other','Other']]
+          .map(([v,l]) => `<option value="${v}"${RD.occ===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field"><label>Monthly UPI Transactions</label>
+      <select id="r-txn">
+        <option value="low">Less than 10/month</option>
+        <option value="med"${!RD.txn||RD.txn==='med'?' selected':''}>10–50/month</option>
+        <option value="high"${RD.txn==='high'?' selected':''}>50–100/month</option>
+        <option value="vhigh"${RD.txn==='vhigh'?' selected':''}>100+/month</option>
+      </select>
+    </div>`;
+
+  else fields = `
+    <div class="field"><label>Primary UPI App</label>
+      <select id="r-upi">
+        ${[['gpay','Google Pay'],['phonepe','PhonePe'],['paytm','Paytm'],['bhim','BHIM UPI'],['other','Other']]
+          .map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+      </select>
+    </div>
+    <div style="background:#fff0e8;border:1.5px solid rgba(212,80,15,.3);border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#d4500f;margin-bottom:10px;">OUR PRIVACY COMMITMENT</div>
+      <div style="font-size:13px;color:#4a3f30;line-height:1.8;">
+        ✅ Raw UPI data <strong>never uploaded</strong> anywhere<br>
+        ✅ All scoring runs <strong>on your device</strong><br>
+        ✅ Banks receive <strong>your score only</strong> — not your transactions<br>
+        ✅ Delete your account and data at any time
+      </div>
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+      <input type="checkbox" id="r-consent" style="margin-top:3px;">
+      <span style="font-size:13px;color:#4a3f30;line-height:1.6;">
+        I agree to CreditDNA's <span style="color:#d4500f;">Privacy Policy</span> and consent to on-device processing of my UPI transaction history.
+      </span>
+    </label>`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:6px;">${dotRow}</div>
+    <p style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#8c7d6a;margin-bottom:18px;text-align:center;">STEP ${RS} OF 3 — ${steps[RS-1].toUpperCase()}</p>
+    <div id="rerr"></div>${fields}
+    <div style="display:flex;gap:10px;margin-top:18px;">
+      ${RS > 1 ? `<button class="btn-outline" style="flex:1;" onclick="window._rBack()">← Back</button>` : ''}
+      <button class="btn-primary" style="flex:2;border-radius:12px;padding:13px;font-size:15px;" onclick="window._rNext()">
+        ${RS < 3 ? 'Continue →' : 'Create Account →'}
+      </button>
+    </div>`;
+
+  window._rBack = () => { RS--; _renderRegisterStep(document.getElementById('auth-form'), go); };
+  window._rNext = () => _validateStep(wrap, go);
+}
+
+function _validateStep(wrap, go) {
+  const err = document.getElementById('rerr');
+
+  if (RS === 1) {
+    const n = document.getElementById('r-name').value.trim();
+    const e = document.getElementById('r-email').value.trim();
+    const p = document.getElementById('r-pass').value;
+    const c = document.getElementById('r-conf').value;
+    if (!n||!e||!p||!c) { err.innerHTML = '<div class="msg-err">Please fill in all fields</div>'; return; }
+    if (p.length < 6) { err.innerHTML = '<div class="msg-err">Password must be at least 6 characters</div>'; return; }
+    if (p !== c) { err.innerHTML = '<div class="msg-err">Passwords don\'t match</div>'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { err.innerHTML = '<div class="msg-err">Please enter a valid email</div>'; return; }
+    Object.assign(RD, { name:n, email:e, pass:p, conf:c }); RS++; _renderRegisterStep(wrap, go);
+
+  } else if (RS === 2) {
+    const o = document.getElementById('r-occ').value;
+    if (!o) { err.innerHTML = '<div class="msg-err">Please select your occupation</div>'; return; }
+    Object.assign(RD, { phone: document.getElementById('r-phone').value.trim(), occ:o, txn: document.getElementById('r-txn').value });
+    RS++; _renderRegisterStep(wrap, go);
+
+  } else {
+    if (!document.getElementById('r-consent').checked) {
+      err.innerHTML = '<div class="msg-err">Please accept the privacy policy to continue</div>'; return;
+    }
+    Object.assign(RD, { upiApp: document.getElementById('r-upi').value, password: RD.pass });
+    const user = doRegister(RD);
+    if (!user) return;
+    if (isAdmin(user)) {
+      err.innerHTML = `<div class="msg-ok">✅ Admin account created! <a href="admin.html" style="color:#0f7e5a;font-weight:700;text-decoration:underline;">Open Admin Portal</a></div>`;
+      setTimeout(() => go('dashboard'), 2500);
+    } else {
+      go('dashboard');
+    }
+  }
+}
+
+
+
+
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+function renderDashboard(go) {
+  const u = DB.me();
+  if (!u) { go('login'); return; }
+  const s = u.score, c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
+
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:1100px; margin:0 auto;">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;flex-wrap:wrap;gap:14px;">
+      <div>
+        <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">
+          Hi, ${u.name.split(' ')[0]} ${isAdmin(u)?'👑':'👋'}
+        </h1>
+        <p style="font-size:14px;color:#8c7d6a;">${u.email}${isAdmin(u)?` · <span style="color:#d4500f;font-weight:600;">Admin</span>`:''}</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${isAdmin(u) ? `<a href="admin.html" class="btn-outline btn-sm" style="color:#d4500f;border-color:rgba(212,80,15,.3);">👑 Admin Portal</a>` : ''}
+        <button class="btn-primary btn-sm" onclick="window._go('check')">Check Score</button>
+      </div>
+    </div>
+
+    <!-- Score card -->
+    <div class="cdna-card" style="padding:28px;margin-bottom:20px;border-top:3px solid ${c};">
+      <div class="score-hero" style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;">
+        <div style="text-align:center;flex-shrink:0;">
+          <!-- SVG Arc Score -->
+          <div style="position:relative;width:160px;height:160px;margin:0 auto;">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="66" fill="none" stroke="#f5f0e8" stroke-width="10"/>
+              <circle cx="80" cy="80" r="66" fill="none" stroke="${c}" stroke-width="10"
+                stroke-dasharray="${Math.PI * 2 * 66}"
+                stroke-dashoffset="${Math.PI * 2 * 66 * (1 - (s ? pct/100 : 0))}"
+                stroke-linecap="round"
+                transform="rotate(-90 80 80)"
+                style="transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1);"/>
+            </svg>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+              <div class="font-display font-extrabold" style="font-size:38px;color:${c};line-height:1;">${s || '?'}</div>
+              <div class="badge" style="background:${c}18;color:${c};margin-top:4px;font-size:11px;">${tier}</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#8c7d6a;margin-top:10px;">YOUR CREDITDNA SCORE</div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          ${s ? `
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#8c7d6a;margin-bottom:6px;"><span>300 — Poor</span><span>900 — Excellent</span></div>
+          <div class="progress-bar" style="margin-bottom:20px;"><div class="progress-fill" id="db-pfill" style="width:0;background:${c};"></div></div>
+          <div class="grid-2" style="gap:12px;">
+            ${[['Payment Regularity','94','Excellent'],['Income Stability','81','Good'],['Merchant Diversity','88','Very Good'],['UPI Tenure','76','Good']]
+              .map(([lbl,val,tier]) => `
+            <div style="background:#faf8f3;border-radius:10px;padding:12px;">
+              <div style="font-size:12px;color:#8c7d6a;margin-bottom:4px;">${lbl}</div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                <span class="font-display font-bold" style="font-size:20px;color:${c};">${val}</span>
+                <span style="font-size:11px;color:#8c7d6a;">/100</span>
+              </div>
+            </div>`).join('')}
+          </div>` : `
+          <div style="text-align:center;padding:40px 0;">
+            <div style="font-size:48px;margin-bottom:16px;">🎯</div>
+            <h3 class="font-display font-bold text-ink mb-2" style="font-size:20px;">No score yet</h3>
+            <p style="color:#8c7d6a;font-size:14px;margin-bottom:20px;">Answer 5 questions to generate your CreditDNA score</p>
+            <button class="btn-primary" onclick="window._go('check')">Generate My Score →</button>
+          </div>`}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="db-grid" style="gap:16px;margin-bottom:20px;">
+      <div class="cdna-card" style="padding:22px;">
+        <div class="label">Recent Activity</div>
+        ${MOCK_TXN.slice(0,4).map(t => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f0e8;">
+          <div class="txn-ico" style="background:${t.credit?'#e8f5ef':'#fdecea'};">${t.ico}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:#1a1208;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.merchant}</div>
+            <div style="font-size:12px;color:#8c7d6a;">${t.date}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:${t.credit?'#0f7e5a':'#c0392b'};flex-shrink:0;">${fmtAmt(t.amt)}</div>
+        </div>`).join('')}
+        <button class="btn-ghost btn-sm" style="width:100%;margin-top:10px;" onclick="window._go('transactions')">View all →</button>
+      </div>
+
+      <div class="cdna-card" style="padding:22px;">
+        <div class="label">Improvement Tips</div>
+        ${[['🔁','Pay utilities via UPI','Could add +15–25 points'],['📅','Maintain monthly income credits','Boosts stability signal'],['🛍️','Diversify merchant categories','More categories = higher score'],['⏰','Use UPI consistently','Tenure adds significant weight']]
+          .map(([i,t,d]) => `
+        <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f5f0e8;">
+          <span style="font-size:18px;flex-shrink:0;">${i}</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#1a1208;">${t}</div>
+            <div style="font-size:12px;color:#0f7e5a;">${d}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Profile summary -->
+    <div class="cdna-card" style="padding:22px;">
+      <div class="label">Your Profile</div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;">
+        ${[['Occupation',OCC_LABELS[u.occ]||'—'],['UPI App',u.upiApp||'—'],['Monthly Transactions',u.txn||'—'],['Member Since',new Date(u.joined).toLocaleDateString('en-IN',{month:'short',year:'numeric'})]]
+          .map(([k,v]) => `
+        <div style="min-width:140px;">
+          <div style="font-size:12px;color:#8c7d6a;margin-bottom:2px;">${k}</div>
+          <div style="font-size:14px;font-weight:600;color:#1a1208;text-transform:capitalize;">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // Animate arc and bar
+  requestAnimationFrame(() => {
+    const fill = document.getElementById('db-pfill');
+    if (fill && s) setTimeout(() => { fill.style.width = pct + '%'; }, 150);
+  });
+}
+
+/* ══════════════════════════════════════════
+   CHECK SCORE
+══════════════════════════════════════════ */
+function renderCheck(go) {
+  const u = DB.me();
+  if (!u) { go('login'); return; }
+
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:660px; margin:0 auto;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <span class="label">Score Check</span>
+      <h1 class="font-display font-extrabold text-ink mb-3" style="font-size:clamp(24px,5vw,36px);">Generate Your CreditDNA Score</h1>
+      <p style="font-size:15px;color:#4a3f30;line-height:1.7;">Answer 5 quick questions about your UPI behaviour. Processed locally — nothing is uploaded.</p>
+    </div>
+    <div class="cdna-card" style="padding:30px;border-radius:20px;" id="score-form">
+      <div style="display:flex;align-items:center;gap:10px;background:#fff0e8;border:1px solid rgba(212,80,15,.3);border-radius:12px;padding:12px 14px;margin-bottom:22px;">
+        <span style="font-size:18px;">🔒</span>
+        <span style="font-size:13px;color:#4a3f30;">Your answers are processed locally on your device. Nothing is uploaded anywhere.</span>
+      </div>
+      ${[['q1','How often do you make UPI payments?',
+          [['3','Rarely — less than 5/month'],['6','Sometimes — 5 to 20/month'],['8','Regularly — 20 to 50/month'],['10','Very often — 50+ times/month']],'8'],
+         ['q2','Do you pay utility bills through UPI?',
+          [['3','No, I never do'],['5','Sometimes, but inconsistently'],['8','Yes, most months'],['10','Yes, every single month']],'10'],
+         ['q3','How many different merchant categories do you pay?',
+          [['3','Only 1–2 types'],['6','About 3–5 types'],['8','Around 6–10 types'],['10','More than 10 different types']],'8'],
+         ['q4','How consistent is your monthly income via UPI?',
+          [['3','Very irregular, hard to predict'],['6','Somewhat irregular'],['8','Mostly consistent month to month'],['10','Very consistent, similar every month']],'8'],
+         ['q5','How long have you been actively using UPI?',
+          [['4','Less than 6 months'],['6','6 months to 1 year'],['8','1 to 3 years'],['10','More than 3 years']],'8'],
+        ].map(([id,lbl,opts,def]) => `
+      <div class="field">
+        <label>${lbl}</label>
+        <select id="${id}">${opts.map(([v,l]) => `<option value="${v}"${v===def?' selected':''}>${l}</option>`).join('')}</select>
+      </div>`).join('')}
+      <button class="btn-primary btn-full btn-lg" style="border-radius:12px;margin-top:8px;" onclick="window._calcScore()">Calculate My Score →</button>
+    </div>
+    <div id="score-result" style="display:none;"></div>
+  </div>`;
+
+  window._calcScore = () => {
+    const vals = ['q1','q2','q3','q4','q5'].map(id => parseInt(document.getElementById(id).value));
+    const avg  = vals.reduce((a,b) => a+b, 0) / vals.length;
+    const s    = Math.min(900, Math.max(300, Math.round(300 + (avg/10)*600 + (Math.random()*28-14))));
+    const c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
+
+    const users = DB.users(), i = users.findIndex(u2 => u2.id === u.id);
+    if (i > -1) { users[i].score = s; DB.save(users); DB.setMe(users[i]); }
+
+    document.getElementById('score-form').style.display = 'none';
+    const res = document.getElementById('score-result');
+    res.style.display = 'block';
+    res.innerHTML = `
+    <div class="cdna-card page-enter" style="padding:32px;border-radius:20px;text-align:center;border-top:3px solid ${c};">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#8c7d6a;margin-bottom:16px;">YOUR CREDITDNA SCORE</div>
+      <div class="font-display font-extrabold" style="font-size:88px;color:${c};line-height:1;" id="score-num">—</div>
+      <div class="badge" style="background:${c}18;color:${c};margin:12px auto;display:inline-flex;font-size:14px;">${tier}</div>
+      <div class="progress-bar" style="margin:20px 0;"><div class="progress-fill" id="res-pfill" style="width:0;background:${c};"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#8c7d6a;margin-bottom:24px;"><span>300</span><span>900</span></div>
+      <div class="grid-2" style="gap:12px;margin-bottom:24px;">
+        ${[['Payment Regularity',vals[1]*10],['UPI Frequency',vals[0]*10],['Merchant Diversity',vals[2]*10],['Income Consistency',vals[3]*10]]
+          .map(([l,v]) => `
+        <div style="background:#faf8f3;border-radius:10px;padding:14px;text-align:left;">
+          <div style="font-size:12px;color:#8c7d6a;margin-bottom:4px;">${l}</div>
+          <div class="font-display font-bold" style="font-size:22px;color:${c};">${v}<span style="font-size:13px;color:#8c7d6a;">/100</span></div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="window._go('dashboard')">View Dashboard →</button>
+        <button class="btn-outline" onclick="window.location.reload()">Recalculate</button>
+      </div>
+    </div>`;
+
+    // Animate score number
+    let current = 300;
+    const target = s;
+    const el = document.getElementById('score-num');
+    const interval = setInterval(() => {
+      current = Math.min(target, current + Math.ceil((target - current) / 8) + 2);
+      if (el) el.textContent = current;
+      if (current >= target) clearInterval(interval);
+    }, 30);
+
+    setTimeout(() => {
+      const fill = document.getElementById('res-pfill');
+      if (fill) fill.style.width = pct + '%';
+    }, 100);
+
+    toast('🎉 Score generated successfully!', 'ok');
+  };
+}
+
+/* ══════════════════════════════════════════
+   TRANSACTIONS
+══════════════════════════════════════════ */
+function renderTransactions(go) {
+  const u = DB.me();
+  if (!u) { go('login'); return; }
+
+  const total  = MOCK_TXN.reduce((a,t) => a + t.amt, 0);
+  const income = MOCK_TXN.filter(t=>t.credit).reduce((a,t)=>a+t.amt,0);
+  const spend  = MOCK_TXN.filter(t=>!t.credit).reduce((a,t)=>a+Math.abs(t.amt),0);
+
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:900px; margin:0 auto;">
+    <div style="margin-bottom:24px;">
+      <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">UPI Transactions</h1>
+      <p style="font-size:14px;color:#8c7d6a;">Demo data — in production, your data stays on-device and is never uploaded.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;" class="ag">
+      ${[['Total Balance',fmtAmt(total),'#d4500f'],['Income',fmtAmt(income),'#0f7e5a'],['Expenses',`−₹${spend.toLocaleString('en-IN')}`,'#c0392b']]
+        .map(([l,v,c]) => `
+      <div class="cdna-card" style="padding:20px;border-top:3px solid ${c};">
+        <div style="font-size:12px;color:#8c7d6a;margin-bottom:6px;">${l}</div>
+        <div class="font-display font-bold" style="font-size:24px;color:${c};">${v}</div>
+      </div>`).join('')}
+    </div>
+
+    <div class="cdna-card" style="overflow:hidden;">
+      <div style="padding:18px 20px;border-bottom:1px solid #e8e0d0;font-size:13px;font-weight:700;color:#1a1208;">
+        All Transactions (${MOCK_TXN.length})
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#faf8f3;">
+              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">MERCHANT</th>
+              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">CATEGORY</th>
+              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">UPI ID</th>
+              <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">DATE</th>
+              <th style="text-align:right;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8c7d6a;">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${MOCK_TXN.map(t => `
+            <tr style="border-bottom:1px solid #f5f0e8;">
+              <td style="padding:12px 16px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="txn-ico" style="background:${t.credit?'#e8f5ef':'#fdecea'};width:34px;height:34px;font-size:14px;">${t.ico}</div>
+                  <div style="font-size:13px;font-weight:600;color:#1a1208;">${t.merchant}</div>
+                </div>
+              </td>
+              <td style="padding:12px 16px;"><span class="badge badge-blue" style="font-size:11px;">${t.cat}</span></td>
+              <td style="padding:12px 16px;font-size:12px;color:#8c7d6a;font-family:monospace;">${t.upi}</td>
+              <td style="padding:12px 16px;font-size:13px;color:#8c7d6a;">${t.date}</td>
+              <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:${t.credit?'#0f7e5a':'#c0392b'};">${fmtAmt(t.amt)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════
+   PROFILE
+══════════════════════════════════════════ */
+function renderProfile(go) {
+  const u = DB.me();
+  if (!u) { go('login'); return; }
+
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px; max-width:700px; margin:0 auto;">
+    <h1 class="font-display font-extrabold text-ink mb-6" style="font-size:clamp(22px,4vw,28px);">Your Profile</h1>
+
+    <div class="cdna-card" style="padding:28px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+        <div style="width:60px;height:60px;border-radius:16px;background:#fff0e8;border:2px solid rgba(212,80,15,.3);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;color:#d4500f;">${u.name.charAt(0)}</div>
+        <div>
+          <div class="font-display font-bold text-ink" style="font-size:20px;">${u.name}</div>
+          <div style="font-size:14px;color:#8c7d6a;">${u.email}</div>
+          ${isAdmin(u) ? `<span class="badge badge-gold" style="margin-top:4px;">👑 Admin</span>` : ''}
+        </div>
+      </div>
+      <div class="grid-2" style="gap:16px;">
+        ${[['Phone',u.phone||'Not provided'],['Occupation',OCC_LABELS[u.occ]||'—'],['Primary UPI App',u.upiApp||'—'],['Monthly Transactions',u.txn||'—'],['Member Since',new Date(u.joined).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})],['Score',u.score||'Not generated yet']]
+          .map(([k,v]) => `
+        <div style="background:#faf8f3;border-radius:10px;padding:14px;">
+          <div style="font-size:12px;color:#8c7d6a;margin-bottom:3px;">${k}</div>
+          <div style="font-size:14px;font-weight:600;color:#1a1208;text-transform:capitalize;">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="cdna-card" style="padding:24px;margin-bottom:20px;">
+      <div class="label">Privacy & Data</div>
+      <p style="font-size:13px;color:#4a3f30;line-height:1.7;margin-bottom:12px;">
+        Raw UPI data is never stored on our servers. Only your score is saved locally in your browser via localStorage.
+        Delete your account anytime to remove all data instantly.
+      </p>
+      <div style="font-size:13px;color:#8c7d6a;">Contact: <span style="color:#d4500f;">privacy@creditdna.in</span></div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn-outline" onclick="window._go('dashboard')">← Dashboard</button>
+      <button class="btn-danger" onclick="if(confirm('Delete your account and all data?')){window._deleteAccount();}">Delete Account</button>
+    </div>
+  </div>`;
+
+  window._deleteAccount = () => {
+    DB.deleteUser(u.id);
+    DB.logout();
+    toast('Account deleted. Goodbye!', 'info');
+    go('landing');
+  };
+}
+
+/* ══════════════════════════════════════════
+   HOW IT WORKS
+══════════════════════════════════════════ */
+function renderHow(go) {
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter section" style="max-width:900px; margin:0 auto; padding-left:clamp(16px,4vw,32px); padding-right:clamp(16px,4vw,32px);">
+    <div style="text-align:center;margin-bottom:56px;">
+      <span class="label">Methodology</span>
+      <h1 class="font-display font-extrabold text-ink mb-4" style="font-size:clamp(26px,5vw,44px);">How CreditDNA Works</h1>
+      <p style="font-size:16px;color:#4a3f30;max-width:580px;margin:0 auto;line-height:1.75;">
+        A complete walkthrough of how we turn UPI transaction history into a fair, explainable, privacy-first credit score.
+      </p>
+    </div>
+
+    ${[['01','#d4500f','Consent & Collection','Your data stays on your device',
+        'You explicitly consent to CreditDNA reading your UPI history. Everything loads into an on-device pipeline — DPDP Act compliant. Raw data is never uploaded to any server, by any pathway.',
+        ['User explicitly consents — revocable anytime','All computation is on-device only','No third-party data sharing','RBI guidelines followed']],
+       ['02','#0f7e5a','Feature Engineering','50+ signals extracted locally',
+        'The on-device pipeline extracts 50+ behavioural signals from your raw transactions: payment frequency, merchant diversity, income regularity, utility payment habits, spending patterns and more.',
+        ['Transaction frequency signals','Income & salary detection','Merchant category diversity','Bill payment regularity']],
+       ['03','#1d5fa8','ML Scoring Engine','Lightweight model, powerful output',
+        'A compressed machine learning model converts your behavioural signals into a score between 300 and 900. The model runs entirely in-browser using JavaScript — no network call required.',
+        ['Trained on synthetic UPI data','300–900 output range','Bias-tested across occupations','Plain-English factor explanations']],
+       ['04','#b45309','Bank API Integration','Banks see the score. Never the data.',
+        'When you apply for a loan, the lender calls our REST API with your consent token. They receive your score, tier, and top factors. Raw transaction data transmission is architecturally impossible.',
+        ['POST /api/score — simple REST call','Input: consent token only','Output: score + tier + top 3 factors','Zero raw transactions ever transmitted']],
+      ].map(([num,c,t,sub,desc,bullets]) => `
+    <div class="cdna-card" style="padding:32px;margin-bottom:24px;border-left:4px solid ${c};">
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+        <div class="font-display font-extrabold" style="font-size:48px;color:${c};opacity:.18;flex-shrink:0;line-height:1;">${num}</div>
+        <div style="flex:1;min-width:240px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:${c};margin-bottom:6px;text-transform:uppercase;">${sub}</div>
+          <h3 class="font-display font-bold text-ink mb-3" style="font-size:22px;">${t}</h3>
+          <p style="font-size:14px;color:#4a3f30;line-height:1.7;margin-bottom:16px;">${desc}</p>
+          <div class="grid-2" style="gap:8px;">
+            ${bullets.map(b => `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#4a3f30;"><span style="color:${c};font-weight:700;flex-shrink:0;">✓</span>${b}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════
+   PRICING
+══════════════════════════════════════════ */
+function renderPricing(go) {
+  document.getElementById('app').innerHTML = `
+  <div class="page-enter section" style="max-width:1000px; margin:0 auto; padding-left:clamp(16px,4vw,32px); padding-right:clamp(16px,4vw,32px);">
+    <div style="text-align:center;margin-bottom:56px;">
+      <span class="label">For Banks & NBFCs</span>
+      <h1 class="font-display font-extrabold text-ink mb-4" style="font-size:clamp(26px,5vw,44px);">Simple, transparent pricing</h1>
+      <p style="font-size:16px;color:#4a3f30;max-width:480px;margin:0 auto;">
+        Pay only for what you use. No setup fees, no hidden costs. Start scoring in minutes.
+      </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:56px;">
+      ${[['Starter','₹2','per API call','Up to 5,000/month','#8c7d6a',['Full score + tier','Top 3 factors','99.5% uptime SLA','Email support'],false],
+         ['Growth','₹1.50','per API call','5K–50K/month','#d4500f',['Everything in Starter','Webhook callbacks','Analytics dashboard','Priority support'],true],
+         ['Enterprise','Custom','pricing','100K+/month','#0f7e5a',['Everything in Growth','Custom SLA agreement','White-label option','AA framework integration','On-premise deployment','Direct team access'],false],
+        ].map(([name,price,unit,vol,c,features,popular]) => `
+      <div class="cdna-card ${popular?'plan-popular':''}" style="padding:32px;border-top:3px solid ${c};${popular?'transform:scale(1.02);':''}">
+        <div style="margin-bottom:24px;">
+          <div style="font-size:13px;font-weight:700;color:${c};letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase;">${name}</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span class="font-display font-extrabold text-ink" style="font-size:36px;">${price}</span>
+            <span style="font-size:14px;color:#8c7d6a;">${unit}</span>
+          </div>
+          <div style="font-size:13px;color:#8c7d6a;margin-top:4px;">${vol}</div>
+        </div>
+        <div style="margin-bottom:24px;">
+          ${features.map(f => `
+          <div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f5f0e8;font-size:13px;color:#4a3f30;">
+            <span style="color:${c};font-weight:700;">✓</span>${f}
+          </div>`).join('')}
+        </div>
+        <button class="btn-${popular?'primary':'outline'} btn-full" onclick="window._go('register')">Get Started →</button>
+      </div>`).join('')}
+    </div>
+
+    <div class="cdna-card" style="padding:32px;text-align:center;">
+      <h3 class="font-display font-bold text-ink mb-3" style="font-size:22px;">API Reference</h3>
+      <p style="font-size:14px;color:#4a3f30;margin-bottom:20px;">Simple REST call. Integrate in minutes.</p>
+      <div style="background:#1a1208;border-radius:12px;padding:20px;text-align:left;font-family:monospace;font-size:13px;color:#22c55e;overflow-x:auto;">
+        <div style="color:#8c7d6a;margin-bottom:8px;">// Request</div>
+        <div>POST /api/score HTTP/1.1</div>
+        <div>Authorization: Bearer YOUR_API_KEY</div>
+        <div>Content-Type: application/json</div>
+        <br>
+        <div>{"consent_token": "cdna_ct_abc123"}</div>
+        <br>
+        <div style="color:#8c7d6a;margin-bottom:8px;">// Response</div>
+        <div>{</div>
+        <div>&nbsp;&nbsp;"score": 724,</div>
+        <div>&nbsp;&nbsp;"tier": "Good",</div>
+        <div>&nbsp;&nbsp;"top_factors": ["payment_regularity","income_stability","merchant_diversity"],</div>
+        <div>&nbsp;&nbsp;"generated_at": "2025-03-17T10:30:00Z"</div>
+        <div>}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+
+
+
+
+/** @type {boolean} */
+let mmOpen = false;
+window._toggleMM = toggleMM;
+
+/**
+ * Render nav links
+ * @param {string} page
+ * @param {Function} go
+ */
+function renderNav(page, go) {
+  const user = DB.me();
+  const linksEl = document.getElementById('nav-links');
+  const logoEl  = document.getElementById('logo-btn');
+
+  if (logoEl) logoEl.onclick = () => go('landing');
+
+  if (!linksEl) return;
+
+  /**
+   * @param {string} id
+   * @param {string} label
+   */
+  const lnk = (id, label) =>
+    `<button class="nav-link${page === id ? ' active' : ''}" onclick="window._go('${id}')">${label}</button>`;
+
+  let h = lnk('landing', 'Home') + lnk('how', 'How It Works') + lnk('pricing', 'For Banks');
+
+  if (user) {
+    if (isAdmin(user)) {
+      h += `<a href="admin.html" class="nav-link" style="color:#d4500f;font-weight:700">👑 Admin Portal</a>`;
+    }
+    h += lnk('dashboard', 'Dashboard') + lnk('check', 'My Score') + lnk('transactions', 'Transactions');
+    h += `<div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>`;
+    h += `<button class="btn-danger btn-sm" onclick="window._logout()">Sign out</button>`;
+  } else {
+    h += lnk('login', 'Sign In');
+    h += `<button class="btn-primary btn-sm" onclick="window._go('register')">Get Started</button>`;
+  }
+
+  linksEl.innerHTML = h;
+
+  // Register globals for onclick in innerHTML
+  window._go = go;
+  window._logout = () => { doLogout(); go('landing'); };
+}
+
+/**
+ * Render mobile menu
+ * @param {string} page
+ * @param {Function} go
+ */
+function renderMM(page, go) {
+  const el = document.getElementById('mobile-menu');
+  if (!el) return;
+  const user = DB.me();
+
+  const item = (id, ico, label) =>
+    `<button class="mm-item" onclick="window._go('${id}');closeMM()">${ico} ${label}</button>`;
+
+  let h = item('landing','🏠','Home') + item('how','🔬','How It Works') + item('pricing','🏦','For Banks');
+
+  if (user) {
+    h += `<div class="mm-div"></div>`;
+    if (isAdmin(user)) {
+      h += `<a href="admin.html" class="mm-item" style="color:#d4500f;font-weight:700">👑 Admin Portal</a>`;
+    }
+    h += item('dashboard','📊','Dashboard') + item('check','🎯','My Score') + item('transactions','💳','Transactions') + item('profile','👤','Profile');
+    h += `<div class="mm-div"></div>`;
+    h += `<button class="mm-item" style="color:#c0392b" onclick="window._logout();closeMM()">🚪 Sign Out</button>`;
+  } else {
+    h += `<div class="mm-div"></div>`;
+    h += item('login','🔑','Sign In');
+    h += `<button class="btn-primary btn-full" style="margin-top:8px" onclick="window._go('register');closeMM()">Get Started Free</button>`;
+  }
+
+  el.innerHTML = h;
+}
+
+function toggleMM() {
+  mmOpen = !mmOpen;
+  const el = document.getElementById('mobile-menu');
+  if (el) el.classList.toggle('open', mmOpen);
+}
+
+function closeMM() {
+  mmOpen = false;
+  const el = document.getElementById('mobile-menu');
+  if (el) el.classList.remove('open');
+}
+
+// Close on outside click
+document.addEventListener('click', e => {
+  if (mmOpen && !e.target.closest('#mobile-menu') && !e.target.closest('#hb')) closeMM();
+});
+
+/**
+ * @fileoverview CreditDNA main app entry point
+ * Client-side router + boot
+ */
+
+
+
+
+
+
+
+
+/* ── State ──────────────────────────── */
+let PAGE = 'landing';
+
+/* ── Router ─────────────────────────── */
+const PAGES = {
+  landing:      go => renderLanding(go),
+  how:          go => renderHow(go),
+  pricing:      go => renderPricing(go),
+  login:        go => renderLogin(go),
+  register:     go => renderRegister(go),
+  dashboard:    go => renderDashboard(go),
+  check:        go => renderCheck(go),
+  transactions: go => renderTransactions(go),
+  profile:      go => renderProfile(go),
+};
+
+/**
+ * Navigate to a page
+ * @param {string} page
+ */
+function go(page) {
+  // Guard protected pages
+  const protected_ = ['dashboard','check','transactions','profile'];
+  if (protected_.includes(page) && !DB.me()) {
+    toast('Please sign in first', 'err');
+    page = 'login';
+  }
+
+  PAGE = page;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Update URL hash (no page reload)
+  history.pushState({ page }, '', `#${page}`);
+
+  // Render nav + page
+  renderNav(PAGE, go);
+  const render = PAGES[page] || PAGES.landing;
+  render(go);
+}
+
+// Expose globally (used in innerHTML onclick)
+window._go = go;
+
+/* ── Handle browser back/forward ────── */
+window.addEventListener('popstate', e => {
+  const page = e.state?.page || 'landing';
+  PAGE = page;
+  renderNav(PAGE, go);
+  (PAGES[page] || PAGES.landing)(go);
+});
+
+/* ── Handle hash on load ─────────────── */
+const hashPage = window.location.hash.replace('#', '') || 'landing';
+
+/* ── Boot ────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  go(PAGES[hashPage] ? hashPage : 'landing');
+});
+
+</script>
+</body>
+</html>
