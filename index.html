@@ -2022,12 +2022,12 @@ function renderTransactions(go) {
 
     ${txns.length > 0 ? `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;" class="ag">
-      ${[['Total Balance',fmtAmt(total),'#d4500f'],['Income',fmtAmt(income),'#0f7e5a'],['Expenses',\`−₹\${spend.toLocaleString('en-IN')}\`,'#c0392b']]
-        .map(([l,v,c]) => \`
-      <div class="cdna-card" style="padding:20px;border-top:3px solid \${c};">
-        <div style="font-size:12px;color:#8c7d6a;margin-bottom:6px;">\${l}</div>
-        <div class="font-display font-bold" style="font-size:24px;color:\${c};">\${v}</div>
-      </div>\`).join('')}
+      ${[['Total Balance',fmtAmt(total),'#d4500f'],['Income',fmtAmt(income),'#0f7e5a'],['Expenses',`−₹${spend.toLocaleString('en-IN')}`,'#c0392b']]
+        .map(([l,v,c]) => `
+      <div class="cdna-card" style="padding:20px;border-top:3px solid ${c};">
+        <div style="font-size:12px;color:#8c7d6a;margin-bottom:6px;">${l}</div>
+        <div class="font-display font-bold" style="font-size:24px;color:${c};">${v}</div>
+      </div>`).join('')}
     </div>
     <div class="cdna-card" style="overflow:hidden;">
       <div style="padding:18px 20px;border-bottom:1px solid #e8e0d0;font-size:13px;font-weight:700;color:#1a1208;">
@@ -2043,17 +2043,17 @@ function renderTransactions(go) {
             </tr>
           </thead>
           <tbody>
-            ${txns.map(t => \`
+            ${txns.map(t => `
             <tr style="border-bottom:1px solid #f5f0e8;">
               <td style="padding:12px 16px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div class="txn-ico" style="background:\${t.credit?'#e8f5ef':'#fdecea'};width:34px;height:34px;font-size:14px;">\${t.credit?'💰':'💳'}</div>
-                  <div style="font-size:13px;font-weight:600;color:#1a1208;">\${escapeHTML(t.merchant)}</div>
+                  <div class="txn-ico" style="background:${t.credit?'#e8f5ef':'#fdecea'};width:34px;height:34px;font-size:14px;">${t.credit?'💰':'💳'}</div>
+                  <div style="font-size:13px;font-weight:600;color:#1a1208;">${escapeHTML(t.merchant)}</div>
                 </div>
               </td>
-              <td style="padding:12px 16px;font-size:13px;color:#8c7d6a;">\${escapeHTML(t.date)}</td>
-              <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:\${t.credit?'#0f7e5a':'#c0392b'};">\${fmtAmt(t.amt)}</td>
-            </tr>\`).join('')}
+              <td style="padding:12px 16px;font-size:13px;color:#8c7d6a;">${escapeHTML(t.date)}</td>
+              <td style="padding:12px 16px;text-align:right;font-size:13px;font-weight:700;color:${t.credit?'#0f7e5a':'#c0392b'};">${fmtAmt(t.amt)}</td>
+            </tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -2066,7 +2066,7 @@ function renderTransactions(go) {
       </p>
       <button class="btn-primary" onclick="window._go('check')">Upload UPI Statement →</button>
     </div>`}
-  </div>\`;
+  </div>`;
 }
 
 
