@@ -1,111 +1,245 @@
-<nav class="fixed w-full z-[500] backdrop-blur-xl border-b border-white/5 py-5 px-10 flex justify-between items-center bg-black/40">
-    <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-tr from-green-500 to-blue-600 rounded-lg flex items-center justify-center font-black text-black">CD</div>
-        <span class="text-2xl font-black tracking-tighter text-white">Credit<span class="text-green-500">DNA</span></span>
-    </div>
-    <div class="hidden lg:flex items-center gap-10 text-sm font-medium uppercase tracking-widest text-gray-400">
-        <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
-        <a href="#bank-tiers" class="hover:text-white transition-colors">Banks</a>
-        <a href="#calculator" class="hover:text-white transition-colors">Calculator</a>
-        <button onclick="showPage('dashboard')" class="hover:text-green-500 transition-colors">Dashboard</button>
-        <button onclick="showPage('auth-page')" class="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-green-500 transition-all">Sign In</button>
-    </div>
-</nav>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CreditDNA | Precision Financial Sequencing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        #dna-container { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(90deg, #22c55e, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        /* Custom scrollbar for dark mode */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="dna-container"></div>
 
-<section class="relative h-screen flex flex-col justify-center px-10 lg:px-24 overflow-hidden">
-    <div class="relative z-10 max-w-4xl">
-        <div class="inline-block px-4 py-1 border border-green-500/30 rounded-full bg-green-500/10 text-green-400 text-xs font-bold mb-6 animate-pulse">
-            V3.0 DEEP SEQUENCING ACTIVE
+    <nav class="fixed w-full z-[500] backdrop-blur-xl border-b border-white/5 py-5 px-10 flex justify-between items-center bg-black/40">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-tr from-green-500 to-blue-600 rounded-lg flex items-center justify-center font-black text-black">CD</div>
+            <span class="text-2xl font-black tracking-tighter text-white">Credit<span class="text-green-500">DNA</span></span>
         </div>
-        <h1 class="text-7xl lg:text-9xl font-black text-white leading-[0.9] mb-8 tracking-tighter">
-            Credit for <br> 
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-blue-500 to-purple-600">everyone.</span>
-        </h1>
-        <p class="text-xl text-gray-400 max-w-xl leading-relaxed mb-10">
-            Forget 3-digit numbers. We decode your UPI transaction history into a rich, multi-dimensional financial genome. Processed on-device. Never shared raw.
-        </p>
-        <div class="flex gap-5">
-            <button onclick="showPage('auth-page')" class="group relative px-8 py-4 bg-green-500 text-black font-black rounded-xl overflow-hidden shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:scale-105 transition-all">
-                <span class="relative z-10">GET YOUR SCORE →</span>
-                <div class="absolute inset-0 bg-white translate-y-12 group-hover:translate-y-0 transition-transform duration-300"></div>
-            </button>
-            <button class="px-8 py-4 border border-white/10 rounded-xl font-bold text-white hover:bg-white/5 transition-all">How It Works</button>
+        <div class="hidden lg:flex items-center gap-10 text-sm font-medium uppercase tracking-widest text-gray-400">
+            <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
+            <a href="#bank-tiers" class="hover:text-white transition-colors">Banks</a>
+            <a href="#calculator" class="hover:text-white transition-colors">Calculator</a>
+            <button onclick="showPage('dashboard')" class="hover:text-green-500 transition-colors">Dashboard</button>
+            <button onclick="showPage('auth-page')" class="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-green-500 transition-all">Sign In</button>
+        </div>
+    </nav>
+
+    <section class="relative h-screen flex flex-col justify-center px-10 lg:px-24">
+        <div class="relative z-10 max-w-4xl">
+            <div class="inline-block px-4 py-1 border border-green-500/30 rounded-full bg-green-500/10 text-green-400 text-xs font-bold mb-6 animate-pulse">
+                V3.0 DEEP SEQUENCING ACTIVE
+            </div>
+            <h1 class="text-7xl lg:text-9xl font-black text-white leading-[0.9] mb-8 tracking-tighter">
+                Credit for <br> 
+                <span class="gradient-text">everyone.</span>
+            </h1>
+            <p class="text-xl text-gray-400 max-w-xl leading-relaxed mb-10">
+                Forget 3-digit numbers. We decode your UPI history into a rich, multi-dimensional financial genome. 
+            </p>
+            <div class="flex gap-5">
+                <button onclick="showPage('auth-page')" class="group relative px-8 py-4 bg-green-500 text-black font-black rounded-xl overflow-hidden shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:scale-105 transition-all">
+                    GET YOUR SCORE →
+                </button>
+                <a href="#how-it-works" class="px-8 py-4 border border-white/10 rounded-xl font-bold text-white hover:bg-white/5 transition-all text-center">How It Works</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="py-32 px-10 bg-black/50">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-5xl font-black mb-20 text-center">The <span class="text-green-500">Process</span></h2>
+            <div class="grid md:grid-cols-3 gap-10">
+                <div class="glass p-10 rounded-3xl border-t-4 border-blue-500">
+                    <div class="text-4xl mb-6">🧬</div>
+                    <h3 class="text-2xl font-bold mb-4">OCR Extraction</h3>
+                    <p class="text-gray-400">Our engine parses bank statements with 99.9% accuracy, converting raw PDFs into structured financial DNA.</p>
+                </div>
+                <div class="glass p-10 rounded-3xl border-t-4 border-green-500">
+                    <div class="text-4xl mb-6">⚖️</div>
+                    <h3 class="text-2xl font-bold mb-4">Risk Sequencing</h3>
+                    <p class="text-gray-400">Analyzing 450+ data points to provide a "Genetic Credit Map" that traditional FICO scores miss.</p>
+                </div>
+                <div class="glass p-10 rounded-3xl border-t-4 border-purple-500">
+                    <div class="text-4xl mb-6">🏦</div>
+                    <h3 class="text-2xl font-bold mb-4">Bank Protocol</h3>
+                    <p class="text-gray-400">Banks receive deep-dive probability reports, reducing default rates by up to 24% through precision underwriting.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="calculator" class="py-32 px-10 bg-zinc-900/20">
+        <div class="max-w-4xl mx-auto glass p-12 rounded-3xl border-l-8 border-blue-500">
+            <h2 class="text-4xl font-black mb-8">DNA Impact <span class="text-blue-500">Calculator</span></h2>
+            <div class="grid md:grid-cols-2 gap-12">
+                <div class="space-y-8">
+                    <div>
+                        <label class="block mb-4 font-bold text-sm text-blue-400">DEBT AMOUNT ($)</label>
+                        <input type="range" id="debt-range" min="1000" max="100000" step="1000" value="25000" class="w-full accent-blue-500" oninput="updateCalc()">
+                        <div class="mt-2 font-mono text-xl text-white">$<span id="debt-val">25,000</span></div>
+                    </div>
+                    <div>
+                        <label class="block mb-4 font-bold text-sm text-blue-400">INTEREST RATE (%)</label>
+                        <input type="range" id="interest-range" min="1" max="30" step="0.5" value="18" class="w-full accent-blue-500" oninput="updateCalc()">
+                        <div class="mt-2 font-mono text-xl text-white"><span id="interest-val">18</span>%</div>
+                    </div>
+                </div>
+                <div class="bg-blue-500/10 p-8 rounded-2xl border border-blue-500/20 text-center">
+                    <h4 class="text-gray-400 text-xs font-bold uppercase mb-2">Estimated DNA Savings</h4>
+                    <div class="text-6xl font-black text-blue-500 mb-2">$<span id="savings-val">4,500</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="bank-tiers" class="py-32 px-10">
+        <div class="max-w-7xl mx-auto text-center mb-16">
+            <h2 class="text-5xl font-black mb-4">Bank Infrastructure</h2>
+            <div class="grid md:grid-cols-3 gap-8 mt-16">
+                <div class="glass p-8 rounded-3xl flex flex-col">
+                    <h3 class="text-xl font-bold text-green-400 mb-4">Credit Union</h3>
+                    <div class="text-4xl font-bold mb-8">$499<span class="text-sm font-normal text-gray-500">/mo</span></div>
+                    <button class="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5">Get Started</button>
+                </div>
+                <div class="glass p-8 rounded-3xl border-2 border-blue-500 flex flex-col relative scale-105">
+                    <h3 class="text-xl font-bold text-blue-400 mb-4">Regional Bank</h3>
+                    <div class="text-4xl font-bold mb-8">$2,499<span class="text-sm font-normal text-gray-500">/mo</span></div>
+                    <button class="w-full py-3 rounded-xl bg-blue-600 font-bold">Most Popular</button>
+                </div>
+                <div class="glass p-8 rounded-3xl flex flex-col">
+                    <h3 class="text-xl font-bold text-purple-400 mb-4">National Tier</h3>
+                    <div class="text-4xl font-bold mb-8">Custom</div>
+                    <button class="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5">Inquire</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="dashboard" class="fixed inset-0 bg-black z-[1000] hidden overflow-y-auto">
+        <nav class="p-6 border-b border-white/10 flex justify-between items-center bg-black sticky top-0">
+            <div class="font-bold text-xl">DNA Console</div>
+            <button onclick="hidePage('dashboard')" class="text-3xl">&times;</button>
+        </nav>
+        <div class="p-10 max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-10">
+                <div class="glass p-10 rounded-3xl text-center">
+                    <h4 class="text-gray-400 text-xs font-bold uppercase mb-4">DNA Score</h4>
+                    <div class="text-7xl font-black text-green-500">742</div>
+                    <p class="text-green-400 font-bold mt-2">EXCELLENT</p>
+                </div>
+                <div class="glass p-10 rounded-3xl col-span-2">
+                    <h4 class="text-xl font-bold mb-6">OCR Document Processor</h4>
+                    <div id="drop-zone" class="border-2 border-dashed border-gray-700 rounded-2xl p-16 text-center hover:border-blue-500 cursor-pointer" onclick="simulateOCR()">
+                        <p class="text-gray-400">Drop Bank Statements here to begin sequencing</p>
+                    </div>
+                    <div id="ocr-loading" class="hidden mt-6">
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                            <div id="ocr-progress" class="bg-blue-500 h-full w-0 transition-all duration-[3000ms]"></div>
+                        </div>
+                    </div>
+                    <div id="ocr-result" class="hidden mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl font-mono text-green-400">
+                        Scan Complete: High Liquidity Detected.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</section>
 
-<script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.getElementById('dna-container').appendChild(renderer.domElement);
+    <div id="auth-page" class="fixed inset-0 bg-black z-[2000] hidden flex items-center justify-center p-6">
+        <div class="glass max-w-md w-full p-10 rounded-3xl">
+            <h2 class="text-3xl font-bold mb-8">DNA Access</h2>
+            <input type="email" placeholder="Email" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-4 outline-none">
+            <input type="password" placeholder="Password" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-6 outline-none">
+            <button onclick="handleAuth()" class="w-full bg-green-500 text-black font-bold py-4 rounded-xl">Login</button>
+            <button onclick="hidePage('auth-page')" class="w-full text-gray-500 mt-6 text-sm">Cancel</button>
+        </div>
+    </div>
 
-    const dnaGroup = new THREE.Group();
-    
-    // Create glowing spheres for the DNA strands
-    function createStrand(color, delay) {
-        const points = [];
-        for (let i = 0; i < 50; i++) {
-            const y = (i * 0.4) - 10;
-            const angle = (i * 0.3) + delay;
-            const x = Math.cos(angle) * 4;
-            const z = Math.sin(angle) * 4;
-            
-            const geo = new THREE.SphereGeometry(0.12, 12, 12);
-            const mat = new THREE.MeshPhongMaterial({ 
-                color: color, 
-                emissive: color, 
-                emissiveIntensity: 2,
-                shininess: 100 
-            });
-            const sphere = new THREE.Mesh(geo, mat);
-            sphere.position.set(x, y, z);
-            dnaGroup.add(sphere);
+    <script>
+        // PAGE ROUTING
+        function showPage(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+        function hidePage(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = 'auto'; }
+        function handleAuth() { alert('Verified!'); hidePage('auth-page'); showPage('dashboard'); }
 
-            // Connectors (Base Pairs)
-            if (delay === 0) {
-                const x2 = Math.cos(angle + Math.PI) * 4;
-                const z2 = Math.sin(angle + Math.PI) * 4;
-                const lineGeo = new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(x, y, z),
-                    new THREE.Vector3(x2, y, z2)
-                ]);
-                const lineMat = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.3 });
-                const line = new THREE.Line(lineGeo, lineMat);
-                dnaGroup.add(line);
+        // CALCULATOR
+        function updateCalc() {
+            const d = document.getElementById('debt-range').value;
+            const i = document.getElementById('interest-range').value;
+            document.getElementById('debt-val').innerText = Number(d).toLocaleString();
+            document.getElementById('interest-val').innerText = i;
+            document.getElementById('savings-val').innerText = Math.round((d * (i/100)) * 0.15).toLocaleString();
+        }
+
+        // OCR SIMULATION
+        function simulateOCR() {
+            document.getElementById('ocr-loading').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('ocr-progress').style.width = '100%'; }, 100);
+            setTimeout(() => {
+                document.getElementById('ocr-loading').classList.add('hidden');
+                document.getElementById('ocr-result').classList.remove('hidden');
+            }, 3200);
+        }
+
+        // 3D DNA ENGINE
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('dna-container').appendChild(renderer.domElement);
+
+        const dnaGroup = new THREE.Group();
+        function createStrand(color, delay) {
+            for (let i = 0; i < 50; i++) {
+                const y = (i * 0.4) - 10;
+                const angle = (i * 0.3) + delay;
+                const x = Math.cos(angle) * 4;
+                const z = Math.sin(angle) * 4;
+                const sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 12, 12),
+                    new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 1 })
+                );
+                sphere.position.set(x, y, z);
+                dnaGroup.add(sphere);
+                if (delay === 0) {
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(x, y, z),
+                        new THREE.Vector3(Math.cos(angle + Math.PI) * 4, y, Math.sin(angle + Math.PI) * 4)
+                    ]);
+                    dnaGroup.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.2 })));
+                }
             }
         }
-    }
+        createStrand(0x22c55e, 0);
+        createStrand(0x3b82f6, Math.PI);
+        scene.add(dnaGroup);
+        scene.add(new THREE.PointLight(0xffffff, 1, 100).clone().set(10, 10, 10));
+        scene.add(new THREE.AmbientLight(0x404040));
+        camera.position.z = 22;
 
-    createStrand(0x22c55e, 0); // Green strand
-    createStrand(0x3b82f6, Math.PI); // Blue strand
-
-    scene.add(dnaGroup);
-    
-    // Lights for 3D depth
-    const light = new THREE.PointLight(0xffffff, 1, 100);
-    light.position.set(10, 10, 10);
-    scene.add(light);
-    const ambient = new THREE.AmbientLight(0x404040);
-    scene.add(ambient);
-
-    camera.position.z = 20;
-    camera.position.x = 5;
-
-    function animate() {
-        requestAnimationFrame(animate);
-        dnaGroup.rotation.y += 0.003;
-        dnaGroup.rotation.x += 0.001;
-        renderer.render(scene, camera);
-    }
-    
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    animate();
-</script>
+        function animate() {
+            requestAnimationFrame(animate);
+            dnaGroup.rotation.y += 0.003;
+            dnaGroup.rotation.x += 0.001;
+            renderer.render(scene, camera);
+        }
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        animate();
+        updateCalc();
+    </script>
+</body>
+</html>
