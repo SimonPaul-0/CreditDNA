@@ -2,63 +2,130 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CreditDNA">
+<meta name="theme-color" content="#010a04">
 <title>CreditDNA — Credit Scoring for Every Indian</title>
 <meta name="description" content="CreditDNA builds a 300–900 credit score from your UPI transaction behaviour. Privacy-first, on-device processing. Finally, credit for 500M unbanked Indians.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-::-webkit-scrollbar{width:5px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:#010a04}
 ::-webkit-scrollbar-thumb{background:#00ff41;border-radius:3px}
-body{background:#010a04;color:#c8f0d4;font-family:'Rajdhani',sans-serif;overflow-x:hidden;line-height:1.6}
+body{background:#010a04;color:#c8f0d4;font-family:'Rajdhani',sans-serif;overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
 @keyframes glow{0%,100%{text-shadow:0 0 12px #00ff41,0 0 24px #00ff41}50%{text-shadow:0 0 32px #00ff41,0 0 64px #00ff41,0 0 90px #00ff41}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(0,255,65,.2)}50%{box-shadow:0 0 22px rgba(0,255,65,.5)}}
 @keyframes scanline{0%{top:-2px}100%{top:100%}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes scoreIn{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
-@keyframes barFill{from{width:0}to{width:var(--w)}}
+@keyframes menuOpen{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
+/* ── UTILITY ──────────────────────────────────────── */
 .page{animation:fadeIn .3s ease}
-.btn{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;border:1.5px solid #00ff41;background:transparent;color:#00ff41;padding:11px 26px;cursor:pointer;transition:all .3s;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
-.btn:hover{background:#00ff41;color:#010a04;box-shadow:0 0 28px rgba(0,255,65,.6)}
+.btn{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;border:1.5px solid #00ff41;background:transparent;color:#00ff41;padding:11px 26px;cursor:pointer;transition:all .3s;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%);min-height:44px;touch-action:manipulation;-webkit-appearance:none;appearance:none}
+.btn:hover,.btn:active{background:#00ff41;color:#010a04;box-shadow:0 0 28px rgba(0,255,65,.6)}
 .btn.solid{background:#00ff41;color:#010a04}
-.btn.solid:hover{background:#00cc33;box-shadow:0 0 36px rgba(0,255,65,.8)}
-.btn.sm{font-size:9px;padding:8px 18px}
+.btn.solid:hover,.btn.solid:active{background:#00cc33;box-shadow:0 0 36px rgba(0,255,65,.8)}
+.btn.sm{font-size:9px;padding:8px 18px;min-height:38px}
 .btn.ghost{border-color:rgba(0,255,65,.3);color:rgba(200,240,212,.6)}
-.btn.ghost:hover{border-color:#00ff41;color:#00ff41;background:transparent}
+.btn.ghost:hover,.btn.ghost:active{border-color:#00ff41;color:#00ff41;background:transparent}
 .card{background:rgba(0,18,7,.92);border:1px solid rgba(0,255,65,.2);border-radius:3px;transition:border-color .3s,box-shadow .3s}
-.card:hover{border-color:rgba(0,255,65,.4)}
-.section{padding:80px 28px;max-width:1120px;margin:0 auto}
+.section{padding:60px 20px;max-width:1120px;margin:0 auto}
 .sec-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:4px;color:#00ff41;margin-bottom:10px;display:block}
-.sec-title{font-family:'Orbitron',sans-serif;font-size:clamp(22px,4vw,36px);font-weight:900;color:#c8f0d4}
+.sec-title{font-family:'Orbitron',sans-serif;font-size:clamp(20px,5vw,36px);font-weight:900;color:#c8f0d4}
 .dark-bg{background:rgba(0,6,2,.8);border-top:1px solid rgba(0,255,65,.07);border-bottom:1px solid rgba(0,255,65,.07)}
-input,select,textarea{background:rgba(0,20,8,.85);border:1px solid rgba(0,255,65,.2);color:#c8f0d4;padding:11px 15px;font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;width:100%;border-radius:2px;transition:all .3s}
+input,select,textarea{background:rgba(0,20,8,.85);border:1px solid rgba(0,255,65,.2);color:#c8f0d4;padding:13px 15px;font-family:'Rajdhani',sans-serif;font-size:16px;outline:none;width:100%;border-radius:2px;transition:all .3s;min-height:48px;-webkit-appearance:none;appearance:none;touch-action:manipulation}
 input:focus,select:focus,textarea:focus{border-color:#00ff41;box-shadow:0 0 12px rgba(0,255,65,.2)}
 input::placeholder,textarea::placeholder{color:#3a6a48}
-select option{background:#010a04}
-label.lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:#00ff41;display:block;margin-bottom:5px}
-.field{margin-bottom:16px}
-.err{background:rgba(255,68,68,.07);border:1px solid rgba(255,68,68,.28);border-radius:3px;padding:10px 14px;margin-bottom:14px;color:#ff8888;font-size:13px}
-.nav-btn{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:rgba(200,240,212,.55);cursor:pointer;transition:all .3s;padding:4px 0;border:none;border-bottom:1px solid transparent;background:none;text-transform:uppercase}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300ff41' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+select option{background:#010a04;color:#c8f0d4}
+label.lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:#00ff41;display:block;margin-bottom:6px}
+.field{margin-bottom:18px}
+.err{background:rgba(255,68,68,.07);border:1px solid rgba(255,68,68,.28);border-radius:3px;padding:12px 14px;margin-bottom:14px;color:#ff8888;font-size:14px}
+/* Nav buttons desktop */
+.nav-btn{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:rgba(200,240,212,.55);cursor:pointer;transition:all .3s;padding:4px 0;border:none;border-bottom:1px solid transparent;background:none;text-transform:uppercase;min-height:44px;touch-action:manipulation}
 .nav-btn:hover,.nav-btn.active{color:#00ff41;border-bottom-color:#00ff41}
-#toast{position:fixed;bottom:22px;right:22px;z-index:9999;padding:13px 20px;font-size:14px;font-family:'Rajdhani',sans-serif;display:none;background:rgba(0,18,7,.98);border:1px solid #00ff41;border-left:4px solid #00ff41;color:#c8f0d4;box-shadow:0 0 20px rgba(0,255,65,.25);border-radius:2px;max-width:300px;animation:fadeInUp .3s ease}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
-.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:16px}
-@media(max-width:600px){.hide-mobile{display:none!important}}
+/* Toast */
+#toast{position:fixed;bottom:max(22px,env(safe-area-inset-bottom,22px));right:16px;left:16px;z-index:9999;padding:13px 18px;font-size:14px;font-family:'Rajdhani',sans-serif;display:none;background:rgba(0,18,7,.98);border:1px solid #00ff41;border-left:4px solid #00ff41;color:#c8f0d4;box-shadow:0 0 20px rgba(0,255,65,.25);border-radius:2px;animation:fadeInUp .3s ease;text-align:center}
+/* Grids */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px}
+
+/* ── HAMBURGER MENU ───────────────────────────────── */
+#hamburger{display:none;flex-direction:column;justify-content:center;align-items:center;width:44px;height:44px;cursor:pointer;gap:5px;background:none;border:none;padding:0;touch-action:manipulation}
+#hamburger span{display:block;width:22px;height:2px;background:#00ff41;border-radius:2px;transition:all .3s}
+#hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+#hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+#hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+#mobile-menu{display:none;position:fixed;top:62px;left:0;right:0;z-index:999;background:rgba(1,10,4,.98);border-bottom:1px solid rgba(0,255,65,.15);backdrop-filter:blur(18px);padding:18px 20px;animation:menuOpen .2s ease;padding-bottom:max(18px,env(safe-area-inset-bottom,18px))}
+#mobile-menu.open{display:block}
+#mobile-menu .m-link{display:block;font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;color:rgba(200,240,212,.65);padding:14px 0;border-bottom:1px solid rgba(0,255,65,.07);text-transform:uppercase;cursor:pointer;background:none;border-top:none;border-left:none;border-right:none;width:100%;text-align:left;transition:color .2s;min-height:48px}
+#mobile-menu .m-link:last-child{border-bottom:none}
+#mobile-menu .m-link:active,#mobile-menu .m-link.active{color:#00ff41}
+#mobile-menu .m-cta{display:block;margin-top:14px;width:100%;padding:14px;text-align:center;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;background:#00ff41;color:#010a04;border:none;cursor:pointer;border-radius:2px;min-height:48px;touch-action:manipulation}
+
+/* ── RESPONSIVE ───────────────────────────────────── */
+@media(max-width:768px){
+  #nav-links{display:none!important}
+  #hamburger{display:flex!important}
+  .section{padding:48px 16px}
+  .grid2{grid-template-columns:1fr}
+  .grid4{grid-template-columns:1fr 1fr}
+  .hero-sub{font-size:15px!important}
+  .stats-bar{gap:24px!important;padding:20px 16px!important}
+  .stat-val{font-size:20px!important}
+  .ravi-grid{grid-template-columns:1fr!important}
+  .ravi-grid>div:nth-child(2){order:-1}
+  .prob-grid{grid-template-columns:1fr!important}
+  .steps-grid{grid-template-columns:1fr 1fr!important}
+  .db-grid{grid-template-columns:1fr!important}
+  .team-grid{grid-template-columns:1fr 1fr!important}
+  .score-num{font-size:72px!important}
+  .form-wrap{max-width:100%!important;padding:0 0!important}
+  .auth-wrap{padding:40px 16px!important;align-items:flex-start!important}
+  .plan-grid{grid-template-columns:1fr!important}
+  .factor-bar-label{font-size:12px!important}
+}
+@media(max-width:480px){
+  .grid4{grid-template-columns:1fr}
+  .hero-ctas{flex-direction:column!important;align-items:stretch!important}
+  .hero-ctas .btn{text-align:center}
+  .hero-score-pill{flex-direction:column!important;gap:10px!important;padding:16px 20px!important;text-align:center}
+  .hero-divider{display:none}
+  .steps-grid{grid-template-columns:1fr!important}
+  .team-grid{grid-template-columns:1fr 1fr!important}
+  .score-actions{flex-direction:column!important;align-items:stretch!important}
+  .score-actions .btn{text-align:center}
+  .db-header-btns{flex-direction:column!important}
+  .profile-footer{flex-direction:column!important}
+  .pricing-grid{grid-template-columns:1fr!important}
+}
+/* iOS safe areas */
+#nav{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+#app{padding-bottom:env(safe-area-inset-bottom,0)}
+footer{padding-bottom:max(24px,env(safe-area-inset-bottom,24px))!important}
+/* Prevent iOS font boosting */
+input,select,textarea{font-size:max(16px,1em)}
+/* Smooth scroll on iOS */
+#app{-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
-<nav id="nav" style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(1,10,4,.97);border-bottom:1px solid rgba(0,255,65,.1);backdrop-filter:blur(14px);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px">
-  <div onclick="go('landing')" style="cursor:pointer;display:flex;align-items:center;gap:11px">
+<nav id="nav" style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(1,10,4,.97);border-bottom:1px solid rgba(0,255,65,.1);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 20px">
+  <div onclick="go('landing');closeMobileMenu()" style="cursor:pointer;display:flex;align-items:center;gap:11px;touch-action:manipulation">
     <svg width="32" height="32" viewBox="0 0 32 32">
       <rect width="32" height="32" rx="3" fill="rgba(0,255,65,.08)" stroke="rgba(0,255,65,.35)" stroke-width="1"/>
       <path d="M8 6 Q16 12 24 6" stroke="#00ff41" stroke-width="1.5" fill="none" opacity=".9"/>
@@ -73,8 +140,16 @@ label.lbl{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;col
       <div style="font-family:'Orbitron',sans-serif;font-size:7px;color:rgba(0,255,65,.35);letter-spacing:2.5px;margin-top:3px">YOUR CREDIT. YOUR DATA.</div>
     </div>
   </div>
+  <!-- Desktop links -->
   <div id="nav-links" style="display:flex;align-items:center;gap:24px"></div>
+  <!-- Hamburger -->
+  <button id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<!-- MOBILE MENU -->
+<div id="mobile-menu"></div>
 
 <div id="app" style="padding-top:62px;min-height:100vh"></div>
 <div id="toast"></div>
@@ -111,8 +186,11 @@ function go(p) {
 /* ── THREE.JS DNA ───────────────────────────────── */
 function initThree(id) {
   if (THREE_KILL) { THREE_KILL(); THREE_KILL = null; }
+  // Skip heavy WebGL on mobile — use CSS grid bg instead (better performance/battery)
+  if (window.innerWidth <= 768) return;
   const canvas = document.getElementById(id); if (!canvas) return;
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'low-power' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, .1, 1000);
@@ -123,7 +201,7 @@ function initThree(id) {
   };
   resize(); window.addEventListener('resize', resize);
 
-  const hg = new THREE.Group(), N = 80, s1 = [], s2 = [];
+  const hg = new THREE.Group(), N = 60, s1 = [], s2 = [];
   for (let i = 0; i < N; i++) {
     const t = i / N * Math.PI * 8, r = 2;
     s1.push(new THREE.Vector3(Math.cos(t) * r, i / N * 14 - 7, Math.sin(t) * r));
@@ -133,22 +211,24 @@ function initThree(id) {
   hg.add(ln(s1, 0x00ff41, .55)); hg.add(ln(s2, 0x44ffcc, .35));
   for (let i = 0; i < N; i += 5) {
     hg.add(ln([s1[i], s2[i]], 0x00ff41, .15));
-    [s1[i], s2[i]].forEach(p => { const m = new THREE.Mesh(new THREE.SphereGeometry(.09, 6, 6), new THREE.MeshBasicMaterial({ color: 0x00ff41, transparent: true, opacity: .75 })); m.position.copy(p); hg.add(m); });
+    [s1[i], s2[i]].forEach(p => { const m = new THREE.Mesh(new THREE.SphereGeometry(.09, 5, 5), new THREE.MeshBasicMaterial({ color: 0x00ff41, transparent: true, opacity: .75 })); m.position.copy(p); hg.add(m); });
   }
   scene.add(hg);
   scene.add(new THREE.Mesh(new THREE.IcosahedronGeometry(3.8, 0), new THREE.MeshBasicMaterial({ color: 0x00ff41, wireframe: true, transparent: true, opacity: .05 })));
-  const pp = new Float32Array(400 * 3);
-  for (let i = 0; i < 400; i++) { pp[i * 3] = (Math.random() - .5) * 26; pp[i * 3 + 1] = (Math.random() - .5) * 26; pp[i * 3 + 2] = (Math.random() - .5) * 10; }
+  const pp = new Float32Array(250 * 3);
+  for (let i = 0; i < 250; i++) { pp[i*3]=(Math.random()-.5)*26; pp[i*3+1]=(Math.random()-.5)*26; pp[i*3+2]=(Math.random()-.5)*10; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-  scene.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x00ff41, size: .05, transparent: true, opacity: .4 })));
+  scene.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x00ff41, size: .05, transparent: true, opacity: .35 })));
 
   let mx = 0, my = 0;
-  const onM = e => { mx = (e.clientX / window.innerWidth - .5) * 2; my = -(e.clientY / window.innerHeight - .5) * 2; };
+  const onM = e => { mx = (e.clientX/window.innerWidth-.5)*2; my = -(e.clientY/window.innerHeight-.5)*2; };
+  const onT = e => { if(e.touches[0]){mx=(e.touches[0].clientX/window.innerWidth-.5)*2; my=-(e.touches[0].clientY/window.innerHeight-.5)*2;} };
   window.addEventListener('mousemove', onM);
+  window.addEventListener('touchmove', onT, {passive:true});
   let t = 0, raf;
-  const anim = () => { raf = requestAnimationFrame(anim); t += .003; hg.rotation.y = t * .3 + mx * .05; hg.rotation.x = my * .03; renderer.render(scene, camera); };
+  const anim = () => { raf = requestAnimationFrame(anim); t += .003; hg.rotation.y = t*.3+mx*.05; hg.rotation.x = my*.03; renderer.render(scene, camera); };
   anim();
-  THREE_KILL = () => { cancelAnimationFrame(raf); window.removeEventListener('mousemove', onM); window.removeEventListener('resize', resize); renderer.dispose(); };
+  THREE_KILL = () => { cancelAnimationFrame(raf); window.removeEventListener('mousemove',onM); window.removeEventListener('touchmove',onT); window.removeEventListener('resize',resize); renderer.dispose(); };
 }
 
 /* ── AUTH ───────────────────────────────────────── */
@@ -166,6 +246,40 @@ function doRegister(data) {
 }
 function doLogout() { DB.clearUser(); USER = null; toast('Logged out successfully', 'info'); go('landing'); }
 
+/* ── MOBILE CHECK ───────────────────────────────── */
+const isMobile = () => window.innerWidth <= 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+/* ── MOBILE MENU ────────────────────────────────── */
+let menuOpen = false;
+function toggleMobileMenu() {
+  menuOpen = !menuOpen;
+  document.getElementById('hamburger').classList.toggle('open', menuOpen);
+  const mm = document.getElementById('mobile-menu');
+  mm.classList.toggle('open', menuOpen);
+  if (menuOpen) renderMobileMenu();
+}
+function closeMobileMenu() {
+  menuOpen = false;
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('mobile-menu').classList.remove('open');
+}
+function renderMobileMenu() {
+  const p = PAGE;
+  const links = [['landing','Home'],['how','How It Works'],['pricing','For Banks']];
+  if (USER) links.push(['dashboard','Dashboard'],['check','My Score'],['profile', USER.name.split(' ')[0]]);
+  const mm = document.getElementById('mobile-menu');
+  mm.innerHTML = links.map(([id, label]) =>
+    `<button class="m-link ${p===id?'active':''}" onclick="go('${id}');closeMobileMenu()">${label}</button>`
+  ).join('') + (USER
+    ? `<button class="m-link" style="color:#ff8888" onclick="doLogout();closeMobileMenu()">Logout</button>`
+    : `<button class="m-cta" onclick="go('register');closeMobileMenu()">Get Your Score →</button><button class="m-link" style="text-align:center;padding-top:14px;color:rgba(0,255,65,.6)" onclick="go('login');closeMobileMenu()">Sign In</button>`
+  );
+}
+// Close menu on outside tap
+document.addEventListener('click', e => {
+  if (menuOpen && !e.target.closest('#mobile-menu') && !e.target.closest('#hamburger')) closeMobileMenu();
+});
+
 /* ── NAV ────────────────────────────────────────── */
 function renderNav() {
   const p = PAGE;
@@ -176,9 +290,11 @@ function renderNav() {
     h += `<button onclick="doLogout()" style="font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1.5px;border:1.5px solid rgba(255,68,68,.4);color:#ff8888;padding:8px 16px;cursor:pointer;background:transparent;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)">Logout</button>`;
   } else {
     h += `<button class="nav-btn" onclick="go('login')">Login</button>`;
-    h += `<button onclick="go('register')" style="font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1.5px;border:1.5px solid #00ff41;color:#010a04;background:#00ff41;padding:9px 20px;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)" onmouseover="this.style.background='#00cc33'" onmouseout="this.style.background='#00ff41'">Get Your Score</button>`;
+    h += `<button onclick="go('register')" style="font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1.5px;border:1.5px solid #00ff41;color:#010a04;background:#00ff41;padding:9px 20px;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)">Get Your Score</button>`;
   }
   document.getElementById('nav-links').innerHTML = h;
+  // Keep mobile menu in sync if open
+  if (menuOpen) renderMobileMenu();
 }
 
 /* ══════════════════════════════════════════════════
@@ -188,7 +304,7 @@ function renderLanding() {
   document.getElementById('app').innerHTML = `<div class="page">
 
   <!-- HERO -->
-  <section style="min-height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 28px 60px;overflow:hidden">
+  <section style="min-height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(80px,12vw,100px) clamp(16px,5vw,28px) 60px;overflow:hidden">
     <canvas id="three-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
     <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,255,65,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,.018) 1px,transparent 1px);background-size:55px 55px;pointer-events:none"></div>
     <div style="position:absolute;left:0;right:0;height:1px;background:rgba(0,255,65,.06);animation:scanline 8s linear infinite;pointer-events:none"></div>
@@ -246,7 +362,7 @@ function renderLanding() {
       <h2 class="sec-title">Banks Reject Millions Who Deserve Credit</h2>
       <p style="color:rgba(200,240,212,.45);margin-top:10px;max-width:580px;margin-left:auto;margin-right:auto;line-height:1.85;font-size:15px">Traditional credit bureaus like CIBIL only cover salaried, formal-sector workers. Hundreds of millions of Indians who are financially active and responsible — but through UPI, cash, and informal channels — are completely invisible to the banking system.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <div class="grid3">
     ${[
       ['❌','CIBIL Gap','CIBIL only covers salaried formal workers. 500M UPI-active Indians — delivery workers, farmers, students, micro-entrepreneurs — don\'t exist in CIBIL\'s world.','#ff5555'],
       ['🔒','Privacy Problem','Existing alternatives send all your UPI transaction data to cloud servers. Post-DPDP Act, this is a serious risk for hundreds of millions of users.','#ffdd44'],
@@ -296,7 +412,7 @@ function renderLanding() {
       <h2 class="sec-title">Meet Ravi</h2>
       <p style="color:rgba(200,240,212,.4);margin-top:8px;font-size:14px;line-height:1.7">Swiggy delivery partner, Chennai. ₹25,000/month via UPI. CIBIL score: <strong style="color:#ff5555">0</strong>.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:18px;align-items:start">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:start">
       <div class="card" style="padding:22px;border-color:rgba(255,85,85,.2)">
         <div style="font-size:26px;text-align:center;margin-bottom:12px">😔</div>
         <div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;color:#ff7777;margin-bottom:14px;text-align:center">WITHOUT CREDITDNA</div>
@@ -708,7 +824,7 @@ function renderDashboard() {
   const scoreTier = score ? (score>=750?'Very Good':score>=650?'Good':score>=550?'Fair':'Poor') : '—';
 
   document.getElementById('app').innerHTML = `<div class="page" style="padding:26px 28px 60px;max-width:1050px;margin:0 auto">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;flex-wrap:wrap;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;flex-wrap:wrap;gap:14px" class="db-header">
       <div>
         <span class="sec-label" style="display:block;margin-bottom:7px">MY DASHBOARD</span>
         <div style="font-family:Orbitron,sans-serif;font-size:clamp(20px,4vw,30px);font-weight:900;color:#c8f0d4">Hello, ${u.name.split(' ')[0]} 🧬</div>
