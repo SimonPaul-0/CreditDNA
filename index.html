@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>CreditDNA — Credit for Every Indian</title>
 <meta name="description" content="Your UPI history is your credit history. CreditDNA builds a 300–900 credit score on your device.">
+<meta name="theme-color" content="#fffef9">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1350,105 +1351,217 @@ function renderProfile(go) {
   </div>`;
 }
 
+function stopHeroDNAIfRunning() {
+  const fn = window._cdnaStopHero3D;
+  if (typeof fn === 'function') fn();
+}
+
 function initDNA(canvas) {
   if (!window.THREE) return;
+  stopHeroDNAIfRunning();
   const scene = new THREE.Scene();
-  const W = canvas.clientWidth || 400, H = canvas.clientHeight || 600;
-  const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 100);
-  camera.position.set(0, 0, 7);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  let W = canvas.clientWidth || 400, H = canvas.clientHeight || 600;
+  const camera = new THREE.PerspectiveCamera(40, W / H, 0.08, 120);
+  camera.position.set(0, 0.15, 8.4);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(W, H);
   renderer.setClearColor(0x000000, 0);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-  
-  const ptLight1 = new THREE.PointLight(0x22c55e, 2, 20);
-  ptLight1.position.set(3, 3, 3);
-  scene.add(ptLight1);
-  
-  const ptLight2 = new THREE.PointLight(0x16a34a, 1.5, 20);
-  ptLight2.position.set(-3, -3, 2);
-  scene.add(ptLight2);
-  
-  const ptLight3 = new THREE.PointLight(0xd4500f, 0.8, 15);
-  ptLight3.position.set(0, 0, 5);
-  scene.add(ptLight3);
-  
-  const group = new THREE.Group();
-  scene.add(group);
-  
-  const strandMat = new THREE.MeshPhongMaterial({ color: 0x22c55e, emissive: 0x0a3d1a, shininess: 80, transparent: true, opacity: 0.92 });
-  const strandMat2 = new THREE.MeshPhongMaterial({ color: 0x16a34a, emissive: 0x061f0d, shininess: 80, transparent: true, opacity: 0.85 });
-  const pairMat = new THREE.MeshPhongMaterial({ color: 0x4ade80, emissive: 0x052e16, transparent: true, opacity: 0.6 });
-  const accentMat = new THREE.MeshPhongMaterial({ color: 0xd4500f, emissive: 0x3d1503, transparent: true, opacity: 0.7 });
-  
-  const TURNS = 3.5, HEIGHT = 5.5, RADIUS = 1.2, STEPS = 80, PAIRS = 14;
-  const SR = 0.07, sphereGeo = new THREE.SphereGeometry(SR, 8, 8);
-  
-  for (let s = 0; s < 2; s++) {
-    const phaseOffset = s === 0 ? 0 : Math.PI;
-    const mat = s === 0 ? strandMat : strandMat2;
-    for (let i = 0; i <= STEPS; i++) {
-      const t = i / STEPS;
-      const angle = t * TURNS * Math.PI * 2 + phaseOffset;
-      const y = t * HEIGHT - HEIGHT / 2;
-      const x = Math.cos(angle) * RADIUS;
-      const z = Math.sin(angle) * RADIUS;
-      const mesh = new THREE.Mesh(sphereGeo, mat);
-      mesh.position.set(x, y, z);
-      const scale = 0.8 + 0.4 * Math.sin(t * Math.PI * 6);
-      mesh.scale.setScalar(scale);
-      group.add(mesh);
-    }
-  }
-  
-  const pairGeo = new THREE.CylinderGeometry(0.04, 0.04, RADIUS * 2, 6);
-  for (let p = 0; p < PAIRS; p++) {
-    const t = p / (PAIRS - 1);
-    const angle = t * TURNS * Math.PI * 2;
+
+  scene.add(new THREE.AmbientLight(0xfff5eb, 0.38));
+  const key = new THREE.DirectionalLight(0xffffff, 0.78);
+  key.position.set(5, 8, 10);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xa7f3d0, 0.32);
+  fill.position.set(-6, -2, -4);
+  scene.add(fill);
+  const rimOrange = new THREE.PointLight(0xd4500f, 1, 24);
+  rimOrange.position.set(-2, -5, 7);
+  scene.add(rimOrange);
+  const rimGreen = new THREE.PointLight(0x22c55e, 1.15, 20);
+  rimGreen.position.set(5, 3, 5);
+  scene.add(rimGreen);
+
+  const helix = new THREE.Group();
+  scene.add(helix);
+
+  const TURNS = 3.85, HEIGHT = 6.1, RADIUS = 1.12, CURVE_SEG = 140;
+  const ptsA = [], ptsB = [];
+  for (let i = 0; i <= CURVE_SEG; i++) {
+    const t = i / CURVE_SEG;
+    const ang = t * TURNS * Math.PI * 2;
     const y = t * HEIGHT - HEIGHT / 2;
-    const x1 = Math.cos(angle) * RADIUS;
-    const z1 = Math.sin(angle) * RADIUS;
-    const x2 = Math.cos(angle + Math.PI) * RADIUS;
-    const z2 = Math.sin(angle + Math.PI) * RADIUS;
-    const midX = (x1 + x2) / 2;
-    const midZ = (z1 + z2) / 2;
-    const mat = p % 3 === 0 ? accentMat : pairMat;
-    const pair = new THREE.Mesh(pairGeo, mat);
-    pair.position.set(midX, y, midZ);
-    pair.rotation.z = Math.PI / 2;
-    pair.rotation.y = angle;
-    group.add(pair);
+    ptsA.push(new THREE.Vector3(Math.cos(ang) * RADIUS, y, Math.sin(ang) * RADIUS));
+    ptsB.push(new THREE.Vector3(Math.cos(ang + Math.PI) * RADIUS, y, Math.sin(ang + Math.PI) * RADIUS));
   }
-  
-  const particleCount = 120;
+  const curveA = new THREE.CatmullRomCurve3(ptsA);
+  const curveB = new THREE.CatmullRomCurve3(ptsB);
+
+  const matStrandA = new THREE.MeshStandardMaterial({
+    color: 0x22c55e,
+    emissive: 0x064e3b,
+    emissiveIntensity: 0.5,
+    metalness: 0.28,
+    roughness: 0.32,
+    transparent: true,
+    opacity: 0.96,
+  });
+  const matStrandB = new THREE.MeshStandardMaterial({
+    color: 0x15803d,
+    emissive: 0x022c1f,
+    emissiveIntensity: 0.45,
+    metalness: 0.22,
+    roughness: 0.38,
+    transparent: true,
+    opacity: 0.94,
+  });
+
+  const tubeSegs = 220;
+  const tubeRad = 0.052;
+  helix.add(new THREE.Mesh(new THREE.TubeGeometry(curveA, tubeSegs, tubeRad, 10, false), matStrandA));
+  helix.add(new THREE.Mesh(new THREE.TubeGeometry(curveB, tubeSegs, tubeRad, 10, false), matStrandB));
+
+  const rungGeo = new THREE.CylinderGeometry(0.032, 0.032, 1, 8);
+  rungGeo.rotateZ(Math.PI / 2);
+  const matRung = new THREE.MeshStandardMaterial({
+    color: 0x86efac,
+    emissive: 0x14532d,
+    emissiveIntensity: 0.42,
+    metalness: 0.12,
+    roughness: 0.48,
+    transparent: true,
+    opacity: 0.78,
+  });
+  const matRungAccent = new THREE.MeshStandardMaterial({
+    color: 0xd4500f,
+    emissive: 0x431407,
+    emissiveIntensity: 0.55,
+    metalness: 0.25,
+    roughness: 0.4,
+    transparent: true,
+    opacity: 0.88,
+  });
+
+  const PAIRS = 26;
+  const xAxis = new THREE.Vector3(1, 0, 0);
+  for (let p = 0; p < PAIRS; p++) {
+    const u = p / (PAIRS - 1);
+    const a = curveA.getPointAt(u);
+    const b = curveB.getPointAt(u);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    dir.normalize();
+    const rung = new THREE.Mesh(rungGeo, p % 5 === 0 ? matRungAccent : matRung);
+    rung.position.copy(mid);
+    rung.scale.set(len, 1, 1);
+    rung.quaternion.setFromUnitVectors(xAxis, dir);
+    helix.add(rung);
+  }
+
+  const beadGeo = new THREE.SphereGeometry(0.062, 10, 10);
+  const steps = 44;
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps;
+    const ba = new THREE.Mesh(beadGeo, i % 2 ? matStrandB : matStrandA);
+    ba.position.copy(curveA.getPointAt(u));
+    helix.add(ba);
+    const bb = new THREE.Mesh(beadGeo, i % 2 ? matStrandA : matStrandB);
+    bb.position.copy(curveB.getPointAt(u));
+    helix.add(bb);
+  }
+
+  const orbitRing = new THREE.Mesh(
+    new THREE.TorusGeometry(3.35, 0.014, 10, 96),
+    new THREE.MeshBasicMaterial({ color: 0xd4500f, transparent: true, opacity: 0.28 }),
+  );
+  orbitRing.rotation.x = Math.PI / 2.65;
+  orbitRing.rotation.y = 0.35;
+  helix.add(orbitRing);
+
+  const innerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(2.05, 0.01, 8, 64),
+    new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.22 }),
+  );
+  innerRing.rotation.x = Math.PI / 2.1;
+  helix.add(innerRing);
+
+  const particleWrap = new THREE.Group();
+  scene.add(particleWrap);
+  const particleCount = 160;
   const positions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * 5;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 7;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 3;
+    positions[i * 3] = (Math.random() - 0.5) * 9;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 8.5;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 4;
   }
   const pGeo = new THREE.BufferGeometry();
   pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const pMat = new THREE.PointsMaterial({ color: 0x22c55e, size: 0.04, transparent: true, opacity: 0.5 });
-  scene.add(new THREE.Points(pGeo, pMat));
-  
+  const pMat = new THREE.PointsMaterial({
+    color: 0x4ade80,
+    size: 0.045,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  particleWrap.add(new THREE.Points(pGeo, pMat));
+
   let mouseX = 0, mouseY = 0;
-  window.addEventListener('mousemove', e => {
+  const onMove = (e) => {
     mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
     mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-  });
-  
+  };
+  window.addEventListener('mousemove', onMove);
+
+  let ro;
+  if (typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(() => {
+      W = canvas.clientWidth || 400;
+      H = canvas.clientHeight || 600;
+      if (W < 2 || H < 2) return;
+      camera.aspect = W / H;
+      camera.updateProjectionMatrix();
+      renderer.setSize(W, H);
+    });
+    ro.observe(canvas);
+  }
+
+  let frame = 0;
   const animate = () => {
-    requestAnimationFrame(animate);
+    frame = requestAnimationFrame(animate);
     const t = performance.now() * 0.001;
-    group.rotation.y = t * 0.35 + mouseX * 0.3;
-    group.rotation.x = mouseY * 0.15;
-    group.position.y = Math.sin(t * 0.4) * 0.08;
-    ptLight1.intensity = 2 + Math.sin(t * 1.5) * 0.5;
+    helix.rotation.y = t * 0.26 + mouseX * 0.32;
+    helix.rotation.x = mouseY * 0.11 + Math.sin(t * 0.22) * 0.04;
+    helix.position.y = Math.sin(t * 0.38) * 0.1;
+    orbitRing.rotation.z = t * 0.12;
+    innerRing.rotation.z = -t * 0.18;
+    particleWrap.rotation.y = t * 0.04;
+    rimGreen.intensity = 1.15 + Math.sin(t * 1.4) * 0.25;
+    rimOrange.intensity = 1 + Math.sin(t * 1.1 + 1) * 0.2;
     renderer.render(scene, camera);
   };
   animate();
+
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    window._cdnaStopHero3D = null;
+    cancelAnimationFrame(frame);
+    window.removeEventListener('mousemove', onMove);
+    if (ro) ro.disconnect();
+    renderer.dispose();
+    scene.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose && m.dispose());
+        else if (obj.material.dispose) obj.material.dispose();
+      }
+    });
+  };
+  window._cdnaStopHero3D = dispose;
 }
 
 let mmOpen = false;
@@ -1491,6 +1604,7 @@ const PAGES = {
 let PAGE = 'landing';
 
 function go(page) {
+  stopHeroDNAIfRunning();
   const protected_ = ['dashboard','check','ocr','transactions','profile'];
   if (protected_.includes(page) && !DB.me()) { toast('Sign in first', 'err'); page = 'login'; }
   PAGE = page;
@@ -1501,7 +1615,13 @@ function go(page) {
 }
 
 window._go = go;
-window.addEventListener('popstate', e => { const page = e.state?.page || 'landing'; PAGE = page; renderNav(PAGE, go); (PAGES[page] || PAGES.landing)(go); });
+window.addEventListener('popstate', e => {
+  stopHeroDNAIfRunning();
+  const page = e.state?.page || 'landing';
+  PAGE = page;
+  renderNav(PAGE, go);
+  (PAGES[page] || PAGES.landing)(go);
+});
 
 const hashPage = window.location.hash.replace('#', '') || 'landing';
 document.addEventListener('DOMContentLoaded', () => { go(PAGES[hashPage] ? hashPage : 'landing'); });

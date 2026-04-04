@@ -2,6 +2,20 @@
 
 Your UPI history is your credit history. CreditDNA is a **client-side web app** (single `index.html`) that helps users think about credit scoring in a **privacy-first** way: questionnaires and document OCR run **in the browser**, with **no server** in this repository.
 
+## What fits CreditDNA best
+
+The name blends **credit** (measurable, serious) with **DNA** (personal, unique, biological metaphor). The strongest fit is everything that reinforces **“your pattern is yours”** without feeling clinical or gimmicky.
+
+| Direction | Why it fits |
+|-----------|-------------|
+| **Warm, paper-like UI** | Cream/off-white (`#fffef9`), deep brown ink (`#1a1208`) — approachable and “Indian consumer app,” not cold bank grey. |
+| **Orange + green** | **Orange** (`#d4500f`) for primary actions and energy; **green** for trust, growth, and the DNA metaphor — reads as hopeful finance, not alarm-red debt. |
+| **Plain language + consent** | Short sentences, real examples (UPI, bills, gig work). Privacy as **architecture** (on-device) matches the story better than generic “we care” copy. |
+| **Helix / structure, not chaos** | A **double helix** reads as “encoded identity” — good for the brand; keep motion **slow and subtle** so it feels premium, not arcade. |
+| **India-first examples** | UPI, DPDP, NBFCs, CIBIL as *context* — not generic US FICO clone positioning. |
+
+**Avoid:** purple-gradient “AI startup” clichés; pure black/white neo-bank minimalism that erases warmth; overpromising bureau-equivalent scores without a licensed backend.
+
 ## What this project is
 
 - **Frontend-only SPA** — Navigation, auth UI, dashboard, score check, OCR upload, and “For Banks” pricing/API docs all live in one HTML file.
@@ -16,7 +30,7 @@ Your UPI history is your credit history. CreditDNA is a **client-side web app** 
 - **300–900 score range** — Same band as conventional credit scores; calculation is **local and illustrative**.
 - **For Banks** — Pricing copy, API example, and **per-account API key** when logged in (copy / regenerate).
 - **Mobile-first UI** — Tailwind (CDN), custom cards, responsive layout.
-- **3D landing visual** — DNA-style helix using **Three.js** (CDN).
+- **3D landing visual** — Double-helix hero built with **Three.js** (r128, CDN): spline-based **tube** strands, rungs, accent torus rings, standard materials + directional lights; animation stops when you leave the page (no leaked `requestAnimationFrame` loops).
 
 ## How it works (user journey)
 
@@ -47,7 +61,7 @@ Avoid relying on `file://` only; OCR libraries and workers behave more reliably 
 
 | Piece | Role |
 |--------|------|
-| `index.html` | Entire UI, routing via hash (`#dashboard`, `#pricing`, …), `localStorage` “DB”, OCR, scoring helpers. |
+| `index.html` | Entire UI, routing via hash (`#dashboard`, `#pricing`, …), `localStorage` “DB”, OCR, scoring helpers, hero 3D (`initDNA` + `stopHeroDNAIfRunning` on route changes). |
 | CDNs | Tailwind, Three.js, **pdf.js**, **tesseract.js** |
 | `localStorage` | Keys `cdna_users`, `cdna_me` — user list and session. |
 
