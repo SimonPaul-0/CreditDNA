@@ -177,6 +177,23 @@ const DB = {
   deleteUser: id => { const users = DB.users().filter(u => u.id !== id); DB.save(users); },
 };
 
+function generateBankApiKey() {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return 'cdna_live_' + [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Ensures the signed-in user has a lender API key (demo / integration ID stored locally). */
+function ensureBankApiKey() {
+  const u = DB.me();
+  if (!u) return '';
+  if (u.bankApiKey && String(u.bankApiKey).length >= 20) return u.bankApiKey;
+  const key = generateBankApiKey();
+  DB.updateUser({ id: u.id, bankApiKey: key });
+  const me = DB.me();
+  return (me && me.bankApiKey) ? me.bankApiKey : key;
+}
+
 function toast(msg, type = 'info') {
   const el = document.getElementById('toast');
   if (!el) return;
@@ -337,7 +354,7 @@ function doLogin(email, password) {
 function doRegister(data) {
   if (DB.findByEmail(data.email)) { toast('This email is already registered', 'err'); return false; }
   const isAdm = ADMIN_EMAILS.includes(data.email.toLowerCase());
-  const user = { id: Date.now(), name: data.name, email: data.email.toLowerCase(), password: data.password, phone: data.phone || '', occ: data.occ, txn: data.txn, upiApp: data.upiApp, isAdmin: isAdm, score: null, joined: new Date().toISOString() };
+  const user = { id: Date.now(), name: data.name, email: data.email.toLowerCase(), password: data.password, phone: data.phone || '', occ: data.occ, txn: data.txn, upiApp: data.upiApp, isAdmin: isAdm, score: null, bankApiKey: null, joined: new Date().toISOString() };
   const users = DB.users();
   users.push(user);
   DB.save(users);
@@ -625,6 +642,31 @@ POST /api/score<br>
 }
 
 function renderPricing(go) {
+  const u = DB.me();
+  const bankKey = u ? ensureBankApiKey() : '';
+  const curlAuth = bankKey ? escapeHTML(bankKey) : 'YOUR_API_KEY';
+  const btnStarter = u
+    ? `<button type="button" class="btn-outline btn-full" onclick="window._go('dashboard')">Go to Dashboard</button>`
+    : `<button type="button" class="btn-outline btn-full" onclick="window._go('register')">Get Started</button>`;
+  const btnGrowth = u
+    ? `<button type="button" class="btn-primary btn-full" onclick="window._go('dashboard')">Go to Dashboard</button>`
+    : `<button type="button" class="btn-primary btn-full" onclick="window._go('register')">Get Started</button>`;
+  const btnEnterprise = u
+    ? `<button type="button" class="btn-outline btn-full" onclick="window.location.href='mailto:contact@creditdna.in?subject=CreditDNA%20Enterprise%20plan'">Contact Sales</button>`
+    : `<button type="button" class="btn-outline btn-full" onclick="window._go('register')">Contact Sales</button>`;
+  const bankKeyCard = u ? `
+        <div class="cdna-card" style="padding:28px;margin:0 auto 32px;max-width:720px;text-align:left;border-top:4px solid #22c55e;">
+          <div class="label" style="margin-bottom:6px;">Lender API access</div>
+          <h2 class="font-display font-bold text-ink mb-2" style="font-size:22px;">Your integration API key</h2>
+          <p style="font-size:13px;color:#8c7d6a;margin-bottom:16px;line-height:1.65;">Signed in as <strong style="color:#4a3f30;">${escapeHTML(u.email)}</strong>. Use this value in <code style="background:#faf8f3;padding:2px 6px;border-radius:4px;font-size:12px;">Authorization: Bearer</code> when calling the CreditDNA score API. It is generated on this device and saved with your account in local storage (demo / sandbox style).</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:12px;">
+            <input id="bank-api-key-input" readonly value="${escapeHTML(bankKey)}" style="flex:1;min-width:220px;font-family:ui-monospace,monospace;font-size:12px;padding:12px 14px;background:#faf8f3;border:1.5px solid #e8e0d0;border-radius:12px;color:#1a1208;">
+            <button type="button" class="btn-primary btn-sm" onclick="window._copyBankApiKey()" style="flex-shrink:0;">Copy key</button>
+            <button type="button" class="btn-outline btn-sm" onclick="window._regenerateBankApiKey()" style="flex-shrink:0;">Regenerate</button>
+          </div>
+          <p style="font-size:12px;color:#8c7d6a;">Regenerating invalidates the previous key for any integration you configured with it.</p>
+        </div>` : '';
+
   document.getElementById('app').innerHTML = `
   <div class="page-enter" style="padding-top:40px;">
     <section class="section" style="background:#fffef9;">
@@ -634,6 +676,8 @@ function renderPricing(go) {
         <p style="font-size:16px;color:#4a3f30;max-width:620px;margin:0 auto 48px;line-height:1.8;">
           Give credit to India's unbanked millions. Simple API. Transparent pricing. No long-term contracts.
         </p>
+
+        ${bankKeyCard}
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:48px;">
           <div class="cdna-card" style="padding:32px;text-align:left;border-top:3px solid #d4500f;">
@@ -651,7 +695,7 @@ function renderPricing(go) {
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f0e8;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">99.5% uptime SLA</span></div>
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">Email support</span></div>
             </div>
-            <button class="btn-outline btn-full" onclick="window._go('register')">Get Started</button>
+            ${btnStarter}
           </div>
 
           <div class="cdna-card" style="padding:32px;text-align:left;border-top:3px solid #0f7e5a;transform:scale(1.05);box-shadow:0 8px 32px rgba(26,18,8,.12);">
@@ -670,7 +714,7 @@ function renderPricing(go) {
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f0e8;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">Analytics dashboard</span></div>
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">Priority support</span></div>
             </div>
-            <button class="btn-primary btn-full" onclick="window._go('register')">Get Started</button>
+            ${btnGrowth}
           </div>
 
           <div class="cdna-card" style="padding:32px;text-align:left;border-top:3px solid #1d5fa8;">
@@ -687,7 +731,7 @@ function renderPricing(go) {
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f0e8;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">White-label option</span></div>
               <div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><span style="color:#0f7e5a;font-weight:700;">✓</span><span style="font-size:13px;color:#4a3f30;">Dedicated account team</span></div>
             </div>
-            <button class="btn-outline btn-full" onclick="window._go('register')">Contact Sales</button>
+            ${btnEnterprise}
           </div>
         </div>
 
@@ -717,7 +761,7 @@ function renderPricing(go) {
           <div class="api-box" style="text-align:left;margin-bottom:16px;">
 // Request<br>
 curl -X POST https://api.creditdna.in/v1/score \<br>
-&nbsp;&nbsp;-H "Authorization: Bearer YOUR_API_KEY" \<br>
+&nbsp;&nbsp;-H "Authorization: Bearer ${curlAuth}" \<br>
 &nbsp;&nbsp;-d '{"consent_token": "cdna_ct_user123"}'<br>
 <br>
 // Response<br>
@@ -760,6 +804,43 @@ curl -X POST https://api.creditdna.in/v1/score \<br>
     </footer>
   </div>`;
 }
+
+window._copyBankApiKey = function () {
+  const el = document.getElementById('bank-api-key-input');
+  const t = el && el.value;
+  if (!t) { toast('Nothing to copy', 'err'); return; }
+  const done = () => toast('API key copied', 'ok');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done).catch(() => {
+      try {
+        el.focus();
+        el.select();
+        document.execCommand('copy');
+        done();
+      } catch (e) {
+        toast('Could not copy — select the key manually', 'err');
+      }
+    });
+  } else {
+    try {
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      done();
+    } catch (e) {
+      toast('Could not copy — select the key manually', 'err');
+    }
+  }
+};
+
+window._regenerateBankApiKey = function () {
+  const u = DB.me();
+  if (!u) { toast('Sign in first', 'err'); return; }
+  if (!confirm('Regenerate your lender API key? You must update any integrations that still use the old key.')) return;
+  DB.updateUser({ id: u.id, bankApiKey: generateBankApiKey() });
+  toast('New API key generated', 'ok');
+  window._go('pricing');
+};
 
 let RS = 1, RD = {}, authTab = 'login';
 
