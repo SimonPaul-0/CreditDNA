@@ -151,7 +151,12 @@ input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow:
 <div id="toast"></div>
 <main id="app" class="pt-16 min-h-screen"></main>
 
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
 const ADMIN_EMAILS = ['simon@creditdna.in', 'mayank@creditdna.in'];
 const OCC_LABELS = { gig: 'Gig Worker', farmer: 'Farmer', student: 'Student', sme: 'Business Owner', daily: 'Daily Wage Worker', freelance: 'Freelancer', salaried: 'Salaried Employee', other: 'Other' };
 
@@ -185,6 +190,142 @@ function toast(msg, type = 'info') {
 }
 
 function escapeHTML(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+const OCR_MAX_PDF_PAGES = 40;
+
+function isPdfFile(file) {
+  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+}
+
+async function loadPdfFromFile(file) {
+  if (!window.pdfjsLib) throw new Error('PDF support not loaded. Refresh the page.');
+  const buf = await file.arrayBuffer();
+  return pdfjsLib.getDocument({ data: buf }).promise;
+}
+
+async function rasterizePdfPage(pdf, pageIndex1Based) {
+  const page = await pdf.getPage(pageIndex1Based);
+  const scale = Math.min(2.5, 1200 / page.getViewport({ scale: 1 }).width);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  return canvas.toDataURL('image/png');
+}
+
+/** Preview + single-page rasterize: first PDF page or image data URL. */
+async function rasterizeFileToDataUrl(file) {
+  if (isPdfFile(file)) {
+    const pdf = await loadPdfFromFile(file);
+    return rasterizePdfPage(pdf, 1);
+  }
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Could not read image file'));
+    r.readAsDataURL(file);
+  });
+}
+
+/**
+ * All raster images to OCR: one entry per PDF page (capped) or one image file.
+ * Regular image uploads are always a single frame (PNG/JPEG/WebP, etc.).
+ */
+async function getOcrPageImages(file) {
+  if (isPdfFile(file)) {
+    const pdf = await loadPdfFromFile(file);
+    const total = pdf.numPages || 1;
+    const n = Math.min(total, OCR_MAX_PDF_PAGES);
+    const dataUrls = [];
+    for (let i = 1; i <= n; i++) {
+      dataUrls.push(await rasterizePdfPage(pdf, i));
+    }
+    return {
+      dataUrls,
+      pdfTotalPages: total,
+      pdfScannedPages: n,
+      pdfTruncated: total > n,
+    };
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Could not read image file'));
+    r.readAsDataURL(file);
+  });
+  return { dataUrls: [dataUrl], pdfTotalPages: 0, pdfScannedPages: 1, pdfTruncated: false };
+}
+
+function parseStatementFromOcrText(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const amounts = [];
+  const seen = new Set();
+  const addAmt = (n) => {
+    if (n >= 0 && n < 1e12 && !seen.has(n)) { seen.add(n); amounts.push(n); }
+  };
+  const rupeeRe = /(?:₹|Rs\.?\s*|INR\s*)([\d][\d,]*(?:\.\d{1,2})?)/gi;
+  let m;
+  while ((m = rupeeRe.exec(text)) !== null) {
+    const n = parseFloat(m[1].replace(/,/g, ''));
+    if (!Number.isNaN(n)) addAmt(n);
+  }
+  const decRe = /\b([\d]{1,3}(?:,\d{2,3})*(?:\.\d{2}))\b/g;
+  while ((m = decRe.exec(text)) !== null) {
+    const n = parseFloat(m[1].replace(/,/g, ''));
+    if (!Number.isNaN(n) && n >= 100 && n % 1 !== 0) addAmt(n);
+  }
+  amounts.sort((a, b) => b - a);
+  const ifscList = [...text.matchAll(/\b[A-Z]{4}0[A-Z0-9]{6}\b/g)].map(x => x[0]);
+  const ifscUnique = [...new Set(ifscList)];
+  const acctMasked = [...text.matchAll(/\b(?:XX+\d{4}|\*{4,}\d{4}|\d{4}\*{4,})\b/g)].slice(0, 3);
+  const dates = [...text.matchAll(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/g)].map(x => x[1]).slice(0, 5);
+  const flags = {
+    hasUpi: /\bUPI\b|@[a-z0-9._-]+\./i.test(text),
+    hasBankKeywords: /\b(balance|statement|account|credit|debit|transfer|NEFT|RTGS|IMPS)\b/i.test(text),
+    hasIfsc: ifscUnique.length > 0,
+    hasDate: dates.length > 0,
+  };
+  return {
+    lineCount: lines.length,
+    charCount: text.length,
+    amounts: amounts.slice(0, 12),
+    ifsc: ifscUnique.slice(0, 3),
+    dates,
+    acctHints: acctMasked.map(x => x[0]),
+    flags,
+    previewLines: lines.slice(0, 8),
+  };
+}
+
+function scoreFromOcrInsights(ins) {
+  const { lineCount, charCount, amounts, flags } = ins;
+  const amountCount = amounts.length;
+  const maxAmount = amounts[0] || 0;
+  let pts = 300;
+  pts += Math.min(160, lineCount * 5);
+  pts += Math.min(80, Math.floor(charCount / 80));
+  pts += Math.min(140, amountCount * 18);
+  if (maxAmount > 0) pts += Math.min(90, Math.log10(maxAmount + 1) * 22);
+  if (flags.hasUpi) pts += 38;
+  if (flags.hasBankKeywords) pts += 38;
+  if (flags.hasIfsc) pts += 28;
+  if (flags.hasDate) pts += 22;
+  return Math.min(900, Math.max(300, Math.round(pts)));
+}
+
+function insightBulletsFromParsed(ins) {
+  const out = [];
+  if (ins.amounts.length) out.push(`Found ${ins.amounts.length} likely currency value(s)`);
+  else out.push('No obvious ₹ / Rs amounts — check raw text below');
+  if (ins.flags.hasUpi) out.push('UPI-style references detected');
+  if (ins.flags.hasBankKeywords) out.push('Bank / statement keywords found');
+  if (ins.ifsc.length) out.push(`IFSC-like codes: ${ins.ifsc.join(', ')}`);
+  if (ins.dates.length) out.push(`Date-like strings: ${ins.dates.slice(0, 3).join(', ')}`);
+  if (!ins.flags.hasBankKeywords && ins.lineCount < 5) out.push('Very little text — try a sharper photo or higher contrast');
+  while (out.length < 4) out.push('Review extracted text for your own details');
+  return out.slice(0, 4);
+}
 
 function doLogin(email, password) {
   const user = DB.findByEmail(email);
@@ -936,18 +1077,26 @@ function renderOCR(go) {
     <div id="success-panel" style="display:none;"></div>
   </div>`;
 
-  // File preview + drag-drop (already working)
-  const input = document.getElementById('ocr-input');
-  input.onchange = (e) => {
-    const file = e.target.files[0];
+  window._ocrFile = null;
+  const showPreview = async (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      document.getElementById('preview-image').src = ev.target.result;
+    window._ocrFile = file;
+    const sp = document.getElementById('success-panel');
+    if (sp) { sp.style.display = 'none'; sp.innerHTML = ''; }
+    const prevBox = document.getElementById('preview-container');
+    if (prevBox) prevBox.style.opacity = '1';
+    try {
+      const url = await rasterizeFileToDataUrl(file);
+      document.getElementById('preview-image').src = url;
       document.getElementById('preview-container').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      window._ocrFile = null;
+      toast(String(err.message || err) || 'Could not load file', 'err');
+    }
   };
+
+  const input = document.getElementById('ocr-input');
+  input.onchange = (e) => { const file = e.target.files[0]; if (file) showPreview(file); };
 
   const dropzone = document.getElementById('dropzone');
   dropzone.ondragover = (e) => { e.preventDefault(); dropzone.style.borderColor = '#d4500f'; };
@@ -955,64 +1104,118 @@ function renderOCR(go) {
   dropzone.ondrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        document.getElementById('preview-image').src = ev.target.result;
-        document.getElementById('preview-container').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) showPreview(file);
   };
 }
 
-function startOCR() {
+async function startOCR() {
   const btn = document.getElementById('extract-btn');
-  btn.innerHTML = `⏳ Extracting...`;
+  const file = window._ocrFile;
+  if (!file) {
+    toast('Choose or drop a document first', 'err');
+    return;
+  }
+  if (typeof Tesseract === 'undefined') {
+    toast('OCR library failed to load. Check your connection and refresh.', 'err');
+    return;
+  }
+
+  btn.innerHTML = '⏳ Preparing image…';
   btn.disabled = true;
+  const t0 = performance.now();
 
-  setTimeout(() => {
-    // Fake OCR complete + extracted data (keeps your current look)
-    toast('✅ OCR Complete!<br>47 fields extracted in 4.2s', 'ok');
+  try {
+    const { dataUrls, pdfTotalPages, pdfScannedPages, pdfTruncated } = await getOcrPageImages(file);
+    const nPages = dataUrls.length;
+    const parts = [];
+    for (let p = 0; p < nPages; p++) {
+      btn.innerHTML = nPages > 1
+        ? `⏳ PDF page ${p + 1} of ${nPages}…`
+        : '⏳ Scanning text (first run downloads language data)…';
+      const { data } = await Tesseract.recognize(dataUrls[p], 'eng', {
+        logger: (ev) => {
+          if (ev.status === 'recognizing text' && typeof ev.progress === 'number') {
+            const pct = Math.round(ev.progress * 100);
+            btn.innerHTML = nPages > 1
+              ? `⏳ Page ${p + 1}/${nPages} · OCR ${pct}%`
+              : `⏳ OCR ${pct}%`;
+          }
+        },
+      });
+      const chunk = (data && data.text) ? data.text.trim() : '';
+      if (chunk) {
+        if (pdfTotalPages > 0) {
+          parts.push(`--- PDF page ${p + 1}${pdfTotalPages > 1 ? ` of ${pdfTotalPages}` : ''} ---\n${chunk}`);
+        } else {
+          parts.push(chunk);
+        }
+      }
+    }
 
-    // === NEW: Score calculation based on "statements" ===
-    const simulatedScore = Math.floor(Math.random() * 120) + 680; // 680–800 range (realistic)
-    const c = scoreColor(simulatedScore);
-    const tier = scoreTier(simulatedScore);
+    let rawText = parts.join('\n\n').trim();
+    if (!rawText) {
+      throw new Error('No text was read from this document. Try better lighting, less blur, or a higher resolution scan.');
+    }
+    if (pdfTruncated) {
+      rawText += `\n\n[Note: Only the first ${pdfScannedPages} of ${pdfTotalPages} PDF pages were scanned (limit ${OCR_MAX_PDF_PAGES}).]`;
+    }
 
-    // Update real user score in localStorage
+    const parsed = parseStatementFromOcrText(rawText);
+    const derivedScore = scoreFromOcrInsights(parsed);
+    const c = scoreColor(derivedScore);
+    const tier = scoreTier(derivedScore);
+    const bullets = insightBulletsFromParsed(parsed);
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    const fieldApprox = Math.min(99, parsed.lineCount + parsed.amounts.length + parsed.ifsc.length + parsed.dates.length);
+    const pageNote = pdfTotalPages > 1
+      ? `${pdfScannedPages} PDF page(s) scanned${pdfTruncated ? ` (${pdfTotalPages} total)` : ''}`
+      : '1 page';
+
+    toast(`✅ OCR complete<br>${fieldApprox}+ signals · ${pageNote} · ${secs}s`, 'ok');
+
     const u = DB.me();
     const users = DB.users();
     const i = users.findIndex(user => user.id === u.id);
     if (i > -1) {
-      users[i].score = simulatedScore;
+      users[i].score = derivedScore;
       DB.save(users);
       DB.setMe(users[i]);
     }
 
-    // Show beautiful result panel
+    const amountsHtml = parsed.amounts.length
+      ? parsed.amounts.slice(0, 6).map(a => `<span style="display:inline-block;margin:4px 8px 0 0;padding:6px 10px;background:#fff;border-radius:8px;border:1px solid #e8e0d0;font-weight:600;">₹${a.toLocaleString('en-IN')}</span>`).join('')
+      : '<span style="color:#8c7d6a;font-size:13px;">None matched — see raw text</span>';
+
     document.getElementById('success-panel').innerHTML = `
       <div class="cdna-card" style="padding:32px;border-top:4px solid ${c};">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;">
           <div>
-            <div style="font-size:13px;font-weight:700;color:#8c7d6a;">EXTRACTED FROM STATEMENT</div>
+            <div style="font-size:13px;font-weight:700;color:#8c7d6a;">EXTRACTED FROM YOUR DOCUMENT</div>
+            <div style="font-size:12px;color:#8c7d6a;margin-top:6px;">${parsed.lineCount} lines · ${parsed.charCount} characters${pdfTotalPages > 1 ? ` · ${pdfScannedPages}/${pdfTotalPages} PDF page(s)${pdfTruncated ? ' (truncated)' : ''}` : ''}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:13px;color:#8c7d6a;">NEW SCORE</div>
-            <div style="font-size:52px;font-weight:800;color:${c};line-height:1;">${simulatedScore}</div>
+            <div style="font-size:13px;color:#8c7d6a;">SCORE FROM DOCUMENT SIGNALS</div>
+            <div style="font-size:52px;font-weight:800;color:${c};line-height:1;">${derivedScore}</div>
             <div style="font-size:15px;color:${c};font-weight:600;">${tier}</div>
           </div>
         </div>
 
-        <div style="background:#faf8f3;border-radius:12px;padding:18px;margin-bottom:24px;">
-          <div style="font-size:13px;color:#8c7d6a;margin-bottom:8px;">Key Insights from your statement</div>
+        <div style="background:#faf8f3;border-radius:12px;padding:18px;margin-bottom:16px;">
+          <div style="font-size:13px;color:#8c7d6a;margin-bottom:10px;">Detected amounts</div>
+          <div style="display:flex;flex-wrap:wrap;">${amountsHtml}</div>
+        </div>
+
+        <div style="background:#faf8f3;border-radius:12px;padding:18px;margin-bottom:20px;">
+          <div style="font-size:13px;color:#8c7d6a;margin-bottom:8px;">Key insights (from OCR text)</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
-            <div>✅ Consistent monthly credits</div>
-            <div>✅ Low utilisation (18%)</div>
-            <div>✅ No bounced payments</div>
-            <div>✅ Strong UPI activity</div>
+            ${bullets.map(b => `<div>✅ ${escapeHTML(b)}</div>`).join('')}
           </div>
         </div>
+
+        <details style="margin-bottom:20px;border:1px solid #e8e0d0;border-radius:12px;padding:14px 16px;background:#fff;">
+          <summary style="cursor:pointer;font-weight:600;color:#1a1208;font-size:14px;">Raw extracted text</summary>
+          <pre style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#4a3f30;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;">${escapeHTML(rawText)}</pre>
+        </details>
 
         <button onclick="window._go('dashboard')" class="btn-primary btn-full" style="border-radius:12px;">
           Add to Dashboard →
@@ -1021,7 +1224,13 @@ function startOCR() {
 
     document.getElementById('success-panel').style.display = 'block';
     document.getElementById('preview-container').style.opacity = '0.6';
-  }, 1600);
+  } catch (err) {
+    const msg = (err && err.message) ? err.message : String(err);
+    toast(msg, 'err');
+  } finally {
+    btn.innerHTML = '🔍 Extract Text';
+    btn.disabled = false;
+  }
 }
 
 function renderTransactions(go) {
