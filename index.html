@@ -1584,6 +1584,20 @@ function renderNav(page, go) {
     h += `<button class="btn-primary btn-sm" onclick="window._go('register')">Get Started</button>`;
   }
   linksEl.innerHTML = h;
+  const mmEl = document.getElementById('mobile-menu');
+if (mmEl) {
+  const lnkMM = (id, label) => 
+    `<button class="mm-item" onclick="window._go('${id}');window._toggleMM()">${label}</button>`;
+  let mm = lnkMM('landing','🏠 Home') + lnkMM('how','⚙️ How It Works') + lnkMM('pricing','🏦 For Banks');
+  if (user) {
+    mm += lnkMM('dashboard','📊 Dashboard') + lnkMM('check','🎯 My Score') + lnkMM('ocr','📸 OCR Scanner');
+    mm += `<button class="mm-item" style="color:#c0392b;" onclick="window._logout();window._toggleMM()">Sign Out</button>`;
+  } else {
+    mm += lnkMM('login','Sign In');
+    mm += lnkMM('register','Get Started →');
+  }
+  mmEl.innerHTML = mm;
+}
   window._go = go;
   window._logout = () => { doLogout(); window._go('landing'); };
 }
