@@ -34,11 +34,42 @@ tailwind.config = {
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #fffef9; }
-::-webkit-scrollbar-thumb { background: #d4c9b5; border-radius: 4px; }
+:root {
+  --bg: #fffef9; --bg-alt: #f5f0e8; --bg-card: #ffffff; --bg-input: #faf8f3;
+  --bg-nav: rgba(255,254,249,0.92); --bg-dark-section: #1a1208; --bg-feature: rgba(255,255,255,0.05); --bg-mobile-menu: rgba(255,254,249,0.97);
+  --ink: #1a1208; --ink-2: #4a3f30; --ink-3: #8c7d6a; --ink-muted: rgba(250,246,236,0.5);
+  --border: #e8e0d0; --border-2: #d4c9b5; --border-card: #e8e0d0; --border-input: #e8e0d0; --border-input-focus: #d4500f;
+  --accent: #d4500f; --accent-h: #b83d0a; --dna: #22c55e; --green: #0f7e5a; --green-bg: #e8f5ef;
+  --shadow-card: 0 1px 3px rgba(26,18,8,.06), 0 8px 24px rgba(26,18,8,.05); --shadow-card-hover: 0 4px 12px rgba(26,18,8,.08), 0 16px 40px rgba(26,18,8,.07);
+  --stats-bg: #1a1208; --stats-text: rgba(250,246,236,0.5); --auth-left-bg: #1a1208; --auth-right-bg: #ffffff; --api-box-bg: #1a1208;
+  --progress-track: #f5f0e8; --badge-accent-bg: #fff0e8; --badge-green-bg: #e8f5ef; --msg-err-bg: #fdecea; --msg-ok-bg: #e8f5ef;
+  --footer-bg: transparent; --scrollbar-track: #fffef9; --scrollbar-thumb: #d4c9b5; --privacy-box-bg: #fff0e8; --auth-text: #faf6ec; --auth-footer: rgba(250,246,236,.2); --on-dark: #fffef9; --logo-bg: #0a1f0a;
+  --feature-orange: #fff0e8; --feature-green: #e8f5ef; --feature-blue: #e8f0fb; --feature-yellow: #fef8e6; --feature-red: #fff0ed;
+}
 
-.nav-glass { background: rgba(255,254,249,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+html[data-theme="dark"] {
+  --bg: #050d05; --bg-alt: #0a120a; --bg-card: rgba(255,255,255,0.04); --bg-input: rgba(255,255,255,0.06);
+  --bg-nav: rgba(5,13,5,0.92); --bg-dark-section: #030a03; --bg-feature: rgba(255,255,255,0.04); --bg-mobile-menu: rgba(5,13,5,0.98);
+  --ink: #e8f0e8; --ink-2: #a0b8a0; --ink-3: #6b8c6b; --ink-muted: rgba(160,184,160,0.5);
+  --green-bg: rgba(34,197,94,0.1);
+  --border: rgba(34,197,94,0.15); --border-2: rgba(34,197,94,0.25); --border-card: rgba(34,197,94,0.15); --border-input: rgba(34,197,94,0.2); --border-input-focus: #22c55e;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2); --shadow-card-hover: 0 0 24px rgba(34,197,94,0.08), 0 16px 40px rgba(0,0,0,0.3);
+  --stats-bg: #030a03; --stats-text: rgba(160,184,160,0.5); --auth-left-bg: #030a03; --auth-right-bg: #050d05; --api-box-bg: #030a03;
+  --progress-track: rgba(255,255,255,0.06); --badge-accent-bg: rgba(212,80,15,0.15); --badge-green-bg: rgba(34,197,94,0.1); --msg-err-bg: rgba(192,57,43,0.12); --msg-ok-bg: rgba(15,126,90,0.12);
+  --footer-bg: #030a03; --scrollbar-track: #050d05; --scrollbar-thumb: rgba(34,197,94,0.3); --privacy-box-bg: rgba(212,80,15,0.1);
+  --feature-orange: rgba(212,80,15,0.12); --feature-green: rgba(15,126,90,0.14); --feature-blue: rgba(29,95,168,0.14); --feature-yellow: rgba(180,83,9,0.14); --feature-red: rgba(192,57,43,0.12); --auth-text: #e8f0e8; --auth-footer: rgba(160,184,160,.2); --on-dark: #e8f0e8; --logo-bg: #020702;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+body { background: var(--bg) !important; color: var(--ink) !important; }
+.nav-glass { background: var(--bg-nav); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+#nav { border-color: var(--border) !important; }
+#hb { background: var(--bg-input) !important; border-color: var(--border) !important; }
+#hb span { background: var(--ink) !important; }
+.text-ink { color: var(--ink) !important; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -48,53 +79,54 @@ tailwind.config = {
 
 .page-enter { animation: fadeUp .35s ease forwards; }
 
-.cdna-card { background: #fff; border: 1.5px solid #e8e0d0; border-radius: 16px; box-shadow: 0 1px 3px rgba(26,18,8,.06), 0 8px 24px rgba(26,18,8,.05); transition: box-shadow .2s, transform .2s; }
-.cdna-card:hover { box-shadow: 0 4px 12px rgba(26,18,8,.08), 0 16px 40px rgba(26,18,8,.07); }
+.cdna-card { background: var(--bg-card); border: 1.5px solid var(--border-card); border-radius: 16px; box-shadow: var(--shadow-card); transition: box-shadow .2s, transform .2s; }
+.cdna-card:hover { box-shadow: var(--shadow-card-hover); }
 .cdna-card-lift:hover { transform: translateY(-2px); }
 
 .btn-primary { background: #d4500f; color: #fff; font-weight: 700; border-radius: 12px; padding: 12px 24px; border: none; cursor: pointer; font-family: inherit; transition: all .18s; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; min-height: 44px; white-space: nowrap; }
 .btn-primary:hover { background: #b83d0a; transform: translateY(-1px); }
 
-.btn-outline { background: transparent; color: #4a3f30; border: 1.5px solid #e8e0d0; border-radius: 12px; padding: 11px 22px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; transition: all .18s; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; }
-.btn-outline:hover { border-color: #d4c9b5; background: #faf8f3; }
+.btn-outline { background: transparent; color: var(--ink-2); border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 22px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; transition: all .18s; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; }
+.btn-outline:hover { border-color: var(--border-2); background: var(--bg-alt); }
 
 .btn-sm { padding: 8px 16px !important; font-size: 13px !important; min-height: 36px !important; border-radius: 9px !important; }
 .btn-lg { padding: 15px 32px !important; font-size: 16px !important; min-height: 52px !important; }
 .btn-full { width: 100%; }
 
 .field { margin-bottom: 16px; }
-.field > label { display: block; font-size: 13px; font-weight: 600; color: #4a3f30; margin-bottom: 6px; }
+.field > label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
 
-input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; background: #faf8f3; border: 1.5px solid #e8e0d0; color: #1a1208; font-family: inherit; font-size: max(16px, 1em); padding: 12px 14px; border-radius: 12px; outline: none; transition: all .2s; }
-input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow: 0 0 0 3px rgba(212,80,15,.12); }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; background: var(--bg-input); border: 1.5px solid var(--border-input); color: var(--ink); font-family: inherit; font-size: max(16px, 1em); padding: 12px 14px; border-radius: 12px; outline: none; transition: all .2s; }
+input:focus, select:focus { border-color: var(--border-input-focus); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(212,80,15,.12); }
 
 #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.toast-item { background: #1a1208; color: #fffef9; padding: 11px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; animation: popIn .25s ease forwards; }
+.toast-item { background: var(--bg-dark-section); color: var(--on-dark); padding: 11px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; animation: popIn .25s ease forwards; }
+footer { background: var(--footer-bg); border-color: var(--border) !important; }
 
-#mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0; z-index: 40; background: rgba(255,254,249,.97); overflow-y: auto; padding: 16px; animation: slideDown .2s ease; }
+#mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--bg-mobile-menu); overflow-y: auto; padding: 16px; animation: slideDown .2s ease; }
 #mobile-menu.open { display: block; }
 .mm-item { width: 100%; padding: 13px 14px; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; background: none; border: none; transition: all .15s; text-align: left; font-family: inherit; }
 
-.auth-tabs { display: flex; background: #faf8f3; border-radius: 12px; padding: 4px; margin-bottom: 24px; }
-.auth-tab { flex: 1; padding: 9px; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: all .2s; color: #8c7d6a; border: none; background: none; font-family: inherit; }
-.auth-tab.active { background: #fff; color: #1a1208; }
+.auth-tabs { display: flex; background: var(--bg-alt); border-radius: 12px; padding: 4px; margin-bottom: 24px; }
+.auth-tab { flex: 1; padding: 9px; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: all .2s; color: var(--ink-3); border: none; background: none; font-family: inherit; }
+.auth-tab.active { background: var(--bg-card); color: var(--ink); }
 
-.progress-bar { height: 8px; background: #f5f0e8; border-radius: 999px; overflow: hidden; }
+.progress-bar { height: 8px; background: var(--progress-track); border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 999px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
 
 .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
-.badge-accent { background: #fff0e8; color: #d4500f; border: 1px solid rgba(212,80,15,.3); }
-.badge-green { background: #e8f5ef; color: #0f7e5a; }
+.badge-accent { background: var(--badge-accent-bg); color: var(--accent); border: 1px solid rgba(212,80,15,.3); }
+.badge-green { background: var(--badge-green-bg); color: var(--green); }
 
-.nav-link { font-size: 14px; font-weight: 500; color: #4a3f30; padding: 7px 12px; border-radius: 8px; cursor: pointer; border: none; background: none; transition: all .15s; min-height: 36px; font-family: inherit; }
-.nav-link:hover, .nav-link.active { background: #faf8f3; color: #1a1208; }
+.nav-link { font-size: 14px; font-weight: 500; color: var(--ink-2); padding: 7px 12px; border-radius: 8px; cursor: pointer; border: none; background: none; transition: all .15s; min-height: 36px; font-family: inherit; }
+.nav-link:hover, .nav-link.active, .mm-item:hover { background: var(--bg-alt); color: var(--ink); }
 
 #dna-canvas { position: absolute; top: 0; right: 0; width: 50%; height: 100%; pointer-events: none; }
 @media (max-width: 768px) { #dna-canvas { display: none; } }
 
 .auth-page { min-height: calc(100vh - 64px); display: grid; grid-template-columns: 1fr 1fr; }
-.auth-left { background: #1a1208; padding: 48px; display: flex; flex-direction: column; justify-content: space-between; }
-.auth-right { padding: 48px clamp(24px,5vw,56px); display: flex; flex-direction: column; justify-content: center; overflow-y: auto; max-height: calc(100vh - 64px); }
+.auth-left { background: var(--auth-left-bg); padding: 48px; display: flex; flex-direction: column; justify-content: space-between; }
+.auth-right { background: var(--auth-right-bg); padding: 48px clamp(24px,5vw,56px); display: flex; flex-direction: column; justify-content: center; overflow-y: auto; max-height: calc(100vh - 64px); }
 @media (max-width: 900px) {
   .auth-page { grid-template-columns: 1fr; min-height: auto; }
   .auth-left { display: none; }
@@ -104,7 +136,7 @@ input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow:
 .db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 768px) { .db-grid { grid-template-columns: 1fr; } .ag { grid-template-columns: 1fr 1fr !important; } }
 
-.label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8c7d6a; margin-bottom: 6px; display: block; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: block; }
 .section { padding: 80px 0; }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(16px,4vw,32px); }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; }
@@ -113,13 +145,16 @@ input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow:
 
 @media (max-width: 480px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: 1fr; } }
 
-.msg-err { background: #fdecea; border: 1px solid rgba(192,57,43,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: #c0392b; font-size: 13px; font-weight: 500; }
-.msg-ok { background: #e8f5ef; border: 1px solid rgba(15,126,90,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: #0f7e5a; font-size: 13px; font-weight: 500; }
+.msg-err { background: var(--msg-err-bg); border: 1px solid rgba(192,57,43,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: #c0392b; font-size: 13px; font-weight: 500; }
+.msg-ok { background: var(--msg-ok-bg); border: 1px solid rgba(15,126,90,.25); border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; color: var(--green); font-size: 13px; font-weight: 500; }
 
-.feature-box { background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,250,235,.1); border-radius: 16px; padding: 24px; transition: all .2s; }
+.feature-box { background: var(--bg-feature); border: 1.5px solid var(--border); border-radius: 16px; padding: 24px; transition: all .2s; }
 .feature-box:hover { background: rgba(255,255,255,0.08); border-color: rgba(34,197,94,.3); }
 
-.api-box { background: #1a1208; border: 1px solid rgba(34,197,94,.2); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 12px; color: #22c55e; overflow-x: auto; }
+.api-box { background: var(--api-box-bg); border: 1px solid rgba(34,197,94,.2); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 12px; color: var(--dna); overflow-x: auto; }
+html[data-theme="dark"] .feature-box { background: rgba(255,255,255,0.03); border-color: rgba(34,197,94,0.12); }
+html[data-theme="dark"] .cdna-card[style*="scale(1.05)"] { box-shadow: 0 0 40px rgba(34,197,94,0.15) !important; }
+html[data-theme="dark"] .cdna-card [style*="background:var(--bg-input)"] { background: var(--bg-alt) !important; }
 </style>
 </head>
 <body class="bg-[#fffef9] font-body text-ink antialiased overflow-x-hidden">
@@ -128,8 +163,8 @@ input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow:
   <div class="w-full max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
     <div id="logo-btn" class="flex items-center gap-3 cursor-pointer flex-shrink-0">
       <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-        <rect width="36" height="36" rx="8" fill="#0a1f0a"/>
-        <g stroke="#22c55e" stroke-width="1.8" stroke-linecap="round">
+        <rect width="36" height="36" rx="8" fill="var(--logo-bg)"/>
+        <g stroke="var(--dna)" stroke-width="1.8" stroke-linecap="round">
           <line x1="9" y1="12" x2="27" y2="12"/><line x1="9" y1="12" x2="9" y2="16"/><line x1="27" y1="12" x2="27" y2="16"/>
           <line x1="9" y1="16" x2="27" y2="16" opacity=".85"/><line x1="9" y1="16" x2="9" y2="20"/><line x1="27" y1="16" x2="27" y2="20"/>
           <line x1="9" y1="20" x2="27" y2="20" opacity=".65"/><line x1="9" y1="20" x2="9" y2="24"/><line x1="27" y1="20" x2="27" y2="24"/>
@@ -158,6 +193,49 @@ input:focus, select:focus { border-color: #d4500f; background: #fff; box-shadow:
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
+const v = (name) => `var(${name})`;
+const THEME_KEY = 'cdna_theme';
+const inlineThemeColors = [
+  ['background:#1a1208', `background:${v('--bg-dark-section')}`],
+  ['color:#1a1208', `color:${v('--ink')}`],
+  ['rgba(250,246,236,.55)', v('--ink-muted')],
+  ['rgba(250,246,236,.5)', v('--stats-text')],
+  ['rgba(250,246,236,.2)', v('--auth-footer')],
+  ['rgba(255,254,249,.97)', v('--bg-mobile-menu')],
+  ['rgba(255,254,249,.92)', v('--bg-nav')],
+  ['#fffef9', v('--bg')], ['#ffffff', v('--bg-card')], ['#fff0e8', v('--privacy-box-bg')],
+  ['#fff0ed', v('--feature-red')], ['#fef8e6', v('--feature-yellow')], ['#f0f7ff', v('--feature-blue')],
+  ['#e8f0fb', v('--feature-blue')], ['#e8f5ef', v('--green-bg')], ['#fdecea', v('--msg-err-bg')],
+  ['#faf8f3', v('--bg-input')], ['#faf6ec', v('--ink')], ['#f5f0e8', v('--bg-alt')],
+  ['#e8e0d0', v('--border')], ['#d4c9b5', v('--border-2')],
+  ['#4a3f30', v('--ink-2')], ['#8c7d6a', v('--ink-3')], ['#fff', v('--bg-card')]
+];
+
+function normalizeInlineThemeColors(root = document) {
+  const elements = [];
+  if (root.nodeType === Node.ELEMENT_NODE && root.hasAttribute('style')) elements.push(root);
+  elements.push(...root.querySelectorAll('[style]'));
+  elements.forEach((element) => {
+    let style = element.getAttribute('style');
+    inlineThemeColors.forEach(([from, to]) => { style = style.split(from).join(to); });
+    element.setAttribute('style', style);
+  });
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem(THEME_KEY, theme);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#050d05' : '#fffef9');
+  normalizeInlineThemeColors();
+}
+
+window._toggleTheme = function() {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  renderNav(PAGE, go);
+};
+
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+
 const ADMIN_EMAILS = ['simon@creditdna.in', 'mayank@creditdna.in'];
 const OCC_LABELS = { gig: 'Gig Worker', farmer: 'Farmer', student: 'Student', sme: 'Business Owner', daily: 'Daily Wage Worker', freelance: 'Freelancer', salaried: 'Salaried Employee', other: 'Other' };
 
@@ -396,7 +474,7 @@ function renderLanding(go) {
       </div>
     </section>
 
-    <section style="background:#1a1208;padding:60px 0;">
+    <section style="background:var(--stats-bg);padding:60px 0;">
       <div class="wrap">
         <div class="grid-4" style="text-align:center;gap:24px;">
           <div><div class="font-display font-extrabold text-[#22c55e]" style="font-size:clamp(28px,4vw,48px);">500M+</div><div style="font-size:13px;color:rgba(250,246,236,.5);margin-top:8px;line-height:1.6;">Unbanked Indians<br>with UPI accounts</div></div>
@@ -432,7 +510,7 @@ function renderLanding(go) {
       </div>
     </section>
 
-    <section class="section" style="background:#faf8f3;">
+    <section class="section" style="background:var(--bg-alt);">
       <div class="wrap" style="text-align:center;">
         <span class="label">How It Works</span>
         <h2 class="font-display font-extrabold text-ink mb-6" style="font-size:clamp(26px,4vw,42px);line-height:1.1;">Your UPI data → Your credit score</h2>
@@ -471,32 +549,32 @@ function renderLanding(go) {
         <span class="label">Why We're Different</span>
         <h2 class="font-display font-extrabold text-ink mb-12" style="font-size:clamp(26px,4vw,42px);line-height:1.1;">Built from the ground up for India's UPI-first economy</h2>
         <div class="grid-3">
-          <div class="feature-box" style="background:#fff0e8;border-color:rgba(212,80,15,.3);">
+          <div class="feature-box" style="background:var(--feature-orange);border-color:rgba(212,80,15,.3);">
             <div style="font-size:32px;margin-bottom:12px;">🔒</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">Privacy is Architecture</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Raw UPI data never leaves your phone—not because of a policy, but because it's technically impossible. All scoring runs locally using Web Workers for isolation.</p>
           </div>
-          <div class="feature-box" style="background:#e8f5ef;border-color:rgba(15,126,90,.3);">
+          <div class="feature-box" style="background:var(--feature-green);border-color:rgba(15,126,90,.3);">
             <div style="font-size:32px;margin-bottom:12px;">⚡</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">Lightning Speed</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Score generated in under 200ms. No server round-trip. No waiting. Your credit score appears before you finish reading this sentence.</p>
           </div>
-          <div class="feature-box" style="background:#e8f0fb;border-color:rgba(29,95,168,.3);">
+          <div class="feature-box" style="background:var(--feature-blue);border-color:rgba(29,95,168,.3);">
             <div style="font-size:32px;margin-bottom:12px;">🧬</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">50+ Signals</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Not just one number. We analyze transaction patterns, consistency, income stability, merchant diversity, and behavioral anomalies.</p>
           </div>
-          <div class="feature-box" style="background:#fef8e6;border-color:rgba(180,83,9,.3);">
+          <div class="feature-box" style="background:var(--feature-yellow);border-color:rgba(180,83,9,.3);">
             <div style="font-size:32px;margin-bottom:12px;">📖</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">Explainable AI</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Every score comes with a plain-English breakdown. You know exactly why you got your score and what you can do to improve it.</p>
           </div>
-          <div class="feature-box" style="background:#fff0ed;border-color:rgba(192,57,43,.3);">
+          <div class="feature-box" style="background:var(--feature-red);border-color:rgba(192,57,43,.3);">
             <div style="font-size:32px;margin-bottom:12px;">🏦</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">Bank-Ready API</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Simple REST endpoint. Lenders POST a token, receive a score. Zero access to raw transaction data by design.</p>
           </div>
-          <div class="feature-box" style="background:#f0f7ff;border-color:rgba(29,95,168,.3);">
+          <div class="feature-box" style="background:var(--feature-blue);border-color:rgba(29,95,168,.3);">
             <div style="font-size:32px;margin-bottom:12px;">🇮🇳</div>
             <div class="font-display font-bold text-ink" style="font-size:18px;margin-bottom:8px;">UPI-First Design</div>
             <p style="font-size:13px;color:#4a3f30;line-height:1.7;">Works for every Indian with a UPI account. No salary slip needed. No bank account required. No problem.</p>
@@ -613,7 +691,7 @@ POST /api/score<br>
       </div>
     </section>
 
-    <section class="section" style="background:#faf8f3;">
+    <section class="section" style="background:var(--bg-alt);">
       <div class="wrap" style="text-align:center;">
         <h2 class="font-display font-extrabold text-ink mb-12" style="font-size:clamp(26px,4vw,44px);">Security & Privacy Guarantees</h2>
         <div class="grid-3">
@@ -757,7 +835,7 @@ function renderPricing(go) {
           </div>
         </div>
 
-        <div style="background:#1a1208;border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:28px;margin-bottom:48px;">
+        <div style="background:var(--api-box-bg);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:28px;margin-bottom:48px;">
           <h3 class="font-display font-bold" style="color:#22c55e;margin-bottom:16px;font-size:16px;">Example API Request & Response</h3>
           <div class="api-box" style="text-align:left;margin-bottom:16px;">
 // Request<br>
@@ -800,7 +878,7 @@ curl -X POST https://api.creditdna.in/v1/score \<br>
       </div>
     </section>
 
-    <footer style="border-top:1px solid #e8e0d0;padding:28px clamp(16px,4vw,32px);text-align:center;background:#faf8f3;">
+    <footer style="border-top:1px solid var(--border);padding:28px clamp(16px,4vw,32px);text-align:center;background:var(--footer-bg);">
       <p style="font-size:13px;color:#8c7d6a;">CreditDNA © 2025 · BOTSQUAD · SRM IST | Trusted by emerging fintech platforms</p>
     </footer>
   </div>`;
@@ -857,15 +935,15 @@ function _renderAuth(go) {
   document.getElementById('app').innerHTML = `
   <div class="auth-page page-enter">
     <div class="auth-left">
-      <div><div class="font-display font-extrabold mb-4" style="font-size:40px;color:#faf6ec;letter-spacing:-.02em;">CreditDNA</div>
-        <h2 class="font-display font-extrabold mb-4" style="font-size:clamp(28px,3.5vw,40px);color:#faf6ec;line-height:1.1;letter-spacing:-.02em;">
+      <div><div class="font-display font-extrabold mb-4" style="font-size:40px;color:var(--auth-text);letter-spacing:-.02em;">CreditDNA</div>
+        <h2 class="font-display font-extrabold mb-4" style="font-size:clamp(28px,3.5vw,40px);color:var(--auth-text);line-height:1.1;letter-spacing:-.02em;">
           Credit for everyone<br>who uses UPI
         </h2>
-        <p style="font-size:15px;color:rgba(250,246,236,.55);line-height:1.75;margin-bottom:36px;">
+        <p style="font-size:15px;color:var(--ink-muted);line-height:1.75;margin-bottom:36px;">
           Your UPI transaction history is rich financial data. We turn it into a 300–900 score — processed on your device, never shared raw.
         </p>
       </div>
-      <div style="font-size:12px;color:rgba(250,246,236,.2);margin-top:24px;">BOTSQUAD · SRM IST · © 2025</div>
+      <div style="font-size:12px;color:var(--auth-footer);margin-top:24px;">BOTSQUAD · SRM IST · © 2025</div>
     </div>
     <div class="auth-right" style="max-width:500px;width:100%;">
       <div style="max-width:420px;width:100%;margin:0 auto;" class="page-enter">
@@ -942,7 +1020,7 @@ function _renderAuthForm(go) {
           <option value="paytm">Paytm</option>
           <option value="bhim">BHIM</option>
         </select></div>
-        <div style="background:#fff0e8;border:1.5px solid rgba(212,80,15,.3);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="background:var(--privacy-box-bg);border:1.5px solid rgba(212,80,15,.3);border-radius:12px;padding:16px;margin-bottom:16px;">
           <div style="font-size:12px;font-weight:700;color:#d4500f;margin-bottom:10px;">PRIVACY COMMITMENT</div>
           <div style="font-size:13px;color:#4a3f30;line-height:1.8;">✅ Raw data never uploaded<br>✅ All scoring on your device<br>✅ Banks get score only<br>✅ Delete anytime</div>
         </div>
@@ -1583,6 +1661,7 @@ function renderNav(page, go) {
     h += lnk('login', 'Sign In');
     h += `<button class="btn-primary btn-sm" onclick="window._go('register')">Get Started</button>`;
   }
+  h += `<button id="theme-toggle" onclick="window._toggleTheme()" style="width:36px;height:36px;border-radius:9px;background:var(--bg-alt);border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .2s;" title="Toggle dark mode">${document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'}</button>`;
   linksEl.innerHTML = h;
   const mmEl = document.getElementById('mobile-menu');
 if (mmEl) {
@@ -1596,6 +1675,7 @@ if (mmEl) {
     mm += lnkMM('login','Sign In');
     mm += lnkMM('register','Get Started →');
   }
+  mm += `<button class="mm-item" onclick="window._toggleTheme();window._toggleMM()" style="display:flex;align-items:center;gap:10px;"><span id="mm-theme-icon">${document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'}</span><span id="mm-theme-label">${document.documentElement.dataset.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>`;
   mmEl.innerHTML = mm;
 }
   window._go = go;
@@ -1638,7 +1718,16 @@ window.addEventListener('popstate', e => {
 });
 
 const hashPage = window.location.hash.replace('#', '') || 'landing';
-document.addEventListener('DOMContentLoaded', () => { go(PAGES[hashPage] ? hashPage : 'landing'); });
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new MutationObserver((records) => {
+    records.forEach((record) => record.addedNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) normalizeInlineThemeColors(node);
+    }));
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  normalizeInlineThemeColors();
+  go(PAGES[hashPage] ? hashPage : 'landing');
+});
 </script>
 </body>
 </html>
