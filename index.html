@@ -155,6 +155,13 @@ footer { background: var(--footer-bg); border-color: var(--border) !important; }
 html[data-theme="dark"] .feature-box { background: rgba(255,255,255,0.03); border-color: rgba(34,197,94,0.12); }
 html[data-theme="dark"] .cdna-card[style*="scale(1.05)"] { box-shadow: 0 0 40px rgba(34,197,94,0.15) !important; }
 html[data-theme="dark"] .cdna-card [style*="background:var(--bg-input)"] { background: var(--bg-alt) !important; }
+.v2-control { height:36px; border:1.5px solid var(--border); border-radius:9px; background:var(--bg-alt); color:var(--ink-2); padding:0 8px; font:600 12px inherit; cursor:pointer; }
+.v2-shell { max-width:1120px; margin:0 auto; padding:28px clamp(16px,4vw,32px) 60px; }
+.v2-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0; }
+.v2-rate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:14px; }
+.v2-bottom-tabs { display:none; }
+@media (max-width:768px) { .v2-kpis { grid-template-columns:1fr 1fr; } .v2-bottom-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:45; justify-content:space-around; padding:8px; background:var(--bg-nav); border-top:1px solid var(--border); backdrop-filter:blur(12px); } .v2-shell { padding-bottom:82px; } }
+@media (max-width:520px) { .role-tabs { flex-direction:column; } .v2-kpis { grid-template-columns:1fr 1fr; } }
 </style>
 </head>
 <body class="bg-[#fffef9] font-body text-ink antialiased overflow-x-hidden">
@@ -189,6 +196,8 @@ html[data-theme="dark"] .cdna-card [style*="background:var(--bg-input)"] { backg
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase/config.js"></script>
 <script>
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
@@ -1523,6 +1532,19 @@ function initDNA(canvas) {
 
   const PAIRS = 26;
   const xAxis = new THREE.Vector3(1, 0, 0);
+  const currencySprite = (symbol, flag, highlighted) => {
+    const label = document.createElement('canvas');
+    label.width = 192; label.height = 96;
+    const context = label.getContext('2d');
+    context.fillStyle = highlighted ? 'rgba(212,80,15,.96)' : 'rgba(5,48,30,.78)';
+    context.roundRect(4, 4, 184, 88, 24); context.fill();
+    context.fillStyle = '#ffffff'; context.font = 'bold 34px Plus Jakarta Sans, sans-serif'; context.textAlign = 'center';
+    context.fillText(`${flag} ${symbol}`, 96, 59);
+    const texture = new THREE.CanvasTexture(label);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+    sprite.scale.set(highlighted ? 0.92 : 0.7, highlighted ? 0.46 : 0.35, 1);
+    return sprite;
+  };
   for (let p = 0; p < PAIRS; p++) {
     const u = p / (PAIRS - 1);
     const a = curveA.getPointAt(u);
@@ -1536,6 +1558,10 @@ function initDNA(canvas) {
     rung.scale.set(len, 1, 1);
     rung.quaternion.setFromUnitVectors(xAxis, dir);
     helix.add(rung);
+    const currency = V2.currencies[p % V2.currencies.length];
+    const badge = currencySprite(currency[1], currency[2], currency[0] === V2.country);
+    badge.position.copy(mid).add(new THREE.Vector3(0, 0.18, 0));
+    helix.add(badge);
   }
 
   const beadGeo = new THREE.SphereGeometry(0.062, 10, 10);
@@ -1567,7 +1593,7 @@ function initDNA(canvas) {
 
   const particleWrap = new THREE.Group();
   scene.add(particleWrap);
-  const particleCount = 160;
+  const particleCount = window.innerWidth < 768 ? 60 : 160;
   const positions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
     positions[i * 3] = (Math.random() - 0.5) * 9;
@@ -1642,53 +1668,149 @@ function initDNA(canvas) {
   window._cdnaStopHero3D = dispose;
 }
 
+const V2 = {
+  language: 'en',
+  country: 'IN',
+  role: 'user',
+  languages: { en: 'English', hi: 'हिंदी', ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা' },
+  countries: { IN: { label: 'India', flag: '🇮🇳', currency: '₹', rate: '9.5%–14.0%' }, US: { label: 'United States', flag: '🇺🇸', currency: '$', rate: '6.5%–12.0%' }, GB: { label: 'United Kingdom', flag: '🇬🇧', currency: '£', rate: '5.3%–9.0%' }, AE: { label: 'UAE', flag: '🇦🇪', currency: 'د.إ', rate: '7.0%–11.5%' } },
+  currencies: [ ['IN','₹','🇮🇳'], ['US','$','🇺🇸'], ['GB','£','🇬🇧'], ['EU','€','🇪🇺'], ['JP','¥','🇯🇵'], ['AE','د.إ','🇦🇪'], ['CN','¥','🇨🇳'], ['KR','₩','🇰🇷'], ['SG','S$','🇸🇬'], ['AU','A$','🇦🇺'], ['CA','C$','🇨🇦'], ['CH','CHF','🇨🇭'], ['BR','R$','🇧🇷'], ['ZA','R','🇿🇦'], ['TH','฿','🇹🇭'], ['TR','₺','🇹🇷'], ['ID','Rp','🇮🇩'], ['MX','$','🇲🇽'], ['SE','kr','🇸🇪'], ['NO','kr','🇳🇴'], ['NZ','NZ$','🇳🇿'], ['SA','﷼','🇸🇦'], ['NG','₦','🇳🇬'], ['PL','zł','🇵🇱'], ['RU','₽','🇷🇺'], ['MY','RM','🇲🇾'], ['PH','₱','🇵🇭'], ['VN','₫','🇻🇳'], ['EG','£','🇪🇬'], ['HK','HK$','🇭🇰'] ]
+};
+
+const I18N = {
+  en: { home: 'Home', how: 'How It Works', rates: 'Rates', signIn: 'Sign In', getStarted: 'Get Started' },
+  hi: { home: 'होम', how: 'कैसे काम करता है', rates: 'दरें', signIn: 'साइन इन', getStarted: 'शुरू करें' },
+  ta: { home: 'முகப்பு', how: 'எப்படி செயல்படுகிறது', rates: 'விகிதங்கள்', signIn: 'உள்நுழைக', getStarted: 'தொடங்கவும்' },
+  te: { home: 'హోమ్', how: 'ఇది ఎలా పని చేస్తుంది', rates: 'రేట్లు', signIn: 'సైన్ ఇన్', getStarted: 'ప్రారంభించండి' },
+  bn: { home: 'হোম', how: 'কীভাবে কাজ করে', rates: 'হার', signIn: 'সাইন ইন', getStarted: 'শুরু করুন' }
+};
+const t = (key) => (I18N[V2.language] || I18N.en)[key] || I18N.en[key] || key;
+
+const supabaseConfig = window.CREDITDNA_SUPABASE_CONFIG || {};
+const hasLiveSupabase = Boolean(supabaseConfig.url && /^sb_publishable_/.test(supabaseConfig.publishableKey || ''));
+const supabaseClient = hasLiveSupabase && window.supabase ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey) : null;
+const currentRole = () => (DB.me() || {}).role || 'user';
+const currentCountry = () => V2.countries[V2.country] || V2.countries.IN;
+const demoRates = () => [
+  ['Excellent', V2.rateOverride?.excellent || '8.5%–9.75%'], ['Good', V2.rateOverride?.good || currentCountry().rate], ['Fair', V2.rateOverride?.fair || '11.5%–14.0%'], ['NRE / NRO', V2.rateOverride?.nri || '8.75%–10.5%']
+];
+
+window._setLanguage = (language) => { V2.language = language; renderNav(PAGE, go); toast(`Language: ${V2.languages[language]}`, 'ok'); };
+window._setCountry = (country) => { V2.country = country; if (PAGE === 'landing') renderLanding(go); renderNav(PAGE, go); toast(`${currentCountry().label} rates selected`, 'ok'); };
+
+function renderLocaleControls(compact = false) {
+  return `<select class="v2-control" aria-label="Language" onchange="window._setLanguage(this.value)">${Object.entries(V2.languages).map(([code, label]) => `<option value="${code}"${V2.language === code ? ' selected' : ''}>${compact ? '🌐 ' : ''}${label}</option>`).join('')}</select>
+  <select class="v2-control" aria-label="Country" onchange="window._setCountry(this.value)">${Object.entries(V2.countries).map(([code, country]) => `<option value="${code}"${V2.country === code ? ' selected' : ''}>${country.flag} ${country.label}</option>`).join('')}</select>`;
+}
+
+function renderRatesPanel(detailLevel = 'summary') {
+  const rates = detailLevel === 'full' ? demoRates() : [['Indicative score band', currentCountry().rate]];
+  return `<div class="cdna-card" style="padding:22px;"><div class="label">${detailLevel === 'full' ? 'Demo rate table' : 'Indicative pricing'}</div><div class="v2-rate-grid">${rates.map(([tier, rate]) => `<div style="background:var(--bg-alt);padding:14px;border-radius:10px;"><div style="font-size:12px;color:var(--ink-3);">${tier}</div><div class="font-display font-bold" style="font-size:20px;color:var(--accent);">${rate}</div></div>`).join('')}</div><p style="font-size:11px;color:var(--ink-3);margin:14px 0 0;">Demo / placeholder rates only. Not a lending quote.</p></div>`;
+}
+
+function renderRoleRates() {
+  const detail = currentRole() === 'user' ? 'summary' : 'full';
+  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter"><span class="label">Pricing and rates</span><h1 class="font-display font-extrabold text-ink" style="font-size:32px;">${currentCountry().flag} ${currentCountry().label} lending context</h1><p style="color:var(--ink-2);margin-bottom:20px;">${detail === 'full' ? 'Full role-authorized demo view.' : 'Summary view for your score context.'}</p>${renderRatesPanel(detail)}</div>${renderBottomTabs(currentRole())}`;
+}
+
+function renderRoleLogin(go) {
+  document.getElementById('app').innerHTML = `<div class="auth-page page-enter"><div class="auth-left"><div><div class="font-display font-extrabold mb-4" style="font-size:40px;color:var(--auth-text);">CreditDNA</div><h2 class="font-display font-extrabold" style="font-size:clamp(28px,3.5vw,40px);color:var(--auth-text);">One platform.<br>Three secure views.</h2><p style="font-size:15px;color:var(--ink-muted);line-height:1.75;margin-top:20px;">Role-aware access for consumers, lenders, and platform administrators.</p></div><div style="font-size:12px;color:var(--auth-footer);">Supabase-ready authentication</div></div><div class="auth-right"><div style="max-width:440px;width:100%;margin:auto;"><span class="label">Secure access</span><h1 class="font-display font-extrabold text-ink" style="font-size:30px;margin-bottom:18px;">Sign in to CreditDNA</h1><div class="auth-tabs role-tabs">${[['user','👤 User'],['bank','🏦 Bank'],['admin','🛡️ Admin']].map(([role,label]) => `<button class="auth-tab${V2.role === role ? ' active' : ''}" onclick="V2.role='${role}';renderRoleLogin(window._go)">${label}</button>`).join('')}</div><div id="v2-login-error"></div><div class="field"><label>${V2.role === 'user' ? 'Registered email, phone, or UPI ID' : V2.role === 'bank' ? 'Institutional email' : 'Administrator email'}</label><input id="v2-identifier" autocomplete="username" placeholder="${V2.role === 'user' ? 'you@domain.com' : V2.role === 'bank' ? 'bank@creditdna.demo' : 'admin@creditdna.demo'}"></div>${V2.role === 'bank' ? '<div class="field"><label>Institution ID</label><input id="v2-institution" placeholder="CDNA-BANK-001"></div>' : ''}<div class="field"><label>Password / secure PIN</label><input id="v2-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>${V2.role === 'admin' ? '<div class="field"><label>Mock 2FA code</label><input id="v2-otp" inputmode="numeric" placeholder="123456"></div>' : ''}<button class="btn-primary btn-full btn-lg" onclick="window._v2Login()">Continue as ${V2.role === 'user' ? 'User' : V2.role === 'bank' ? 'Bank' : 'Admin'} →</button><p style="font-size:12px;color:var(--ink-3);text-align:center;margin-top:16px;">${hasLiveSupabase ? 'Live Supabase authentication is enabled.' : 'Demo mode is active until the publishable key is added.'}</p></div></div></div>`;
+}
+
+window._v2Login = async () => {
+  const identifier = document.getElementById('v2-identifier').value.trim().toLowerCase();
+  const password = document.getElementById('v2-password').value;
+  const error = document.getElementById('v2-login-error');
+  const expectedInstitution = V2.role === 'bank' ? document.getElementById('v2-institution').value.trim() : '';
+  if (!identifier || !password || (V2.role === 'admin' && document.getElementById('v2-otp').value !== '123456')) { error.innerHTML = '<div class="msg-err">Check your credentials and 2FA code.</div>'; return; }
+  if (supabaseClient) {
+    const { data, error: authError } = await supabaseClient.auth.signInWithPassword({ email: identifier, password });
+    if (authError) { error.innerHTML = `<div class="msg-err">${escapeHTML(authError.message)}</div>`; return; }
+    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).single();
+    if (!profile || profile.role !== V2.role || (V2.role === 'bank' && profile.institution_id !== expectedInstitution)) { await supabaseClient.auth.signOut(); error.innerHTML = '<div class="msg-err">This account does not have the requested role.</div>'; return; }
+    DB.setMe({ id: data.user.id, name: profile.display_name, email: data.user.email, role: profile.role, institutionId: profile.institution_id, score: profile.score, joined: profile.created_at });
+  } else {
+    DB.setMe({ id: `demo-${V2.role}`, name: `Demo ${V2.role}`, email: identifier, role: V2.role, institutionId: expectedInstitution, score: V2.role === 'user' ? 724 : null, joined: new Date().toISOString() });
+  }
+  toast(`${V2.role[0].toUpperCase() + V2.role.slice(1)} session ready`, 'ok');
+  window._go(V2.role === 'user' ? 'dashboard' : V2.role);
+};
+
+function renderRoleDashboard(go) {
+  const user = DB.me();
+  if (!user) { go('login'); return; }
+  const role = currentRole();
+  if (role === 'bank') return renderBankDashboard();
+  if (role === 'admin') return renderAdminDashboard();
+  renderDashboard(go);
+}
+
+function renderBankDashboard() {
+  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter"><span class="label">Bank workspace</span><h1 class="font-display font-extrabold text-ink" style="font-size:32px;">Portfolio intelligence</h1><p style="color:var(--ink-2);">${currentCountry().flag} ${currentCountry().label} · full demo pricing access</p><div class="v2-kpis">${[['Applicants reviewed','1,248'],['Verified scores','936'],['Portfolio quality','92.4%'],['Avg. decision time','4m 12s']].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--green);">${value}</div></div>`).join('')}</div><div class="db-grid"><div class="cdna-card" style="padding:22px;"><div class="label">Applicant lookup</div><input placeholder="UPI ID, consent token, or applicant email"><button class="btn-primary" style="margin-top:12px;" onclick="toast('Demo verification: score 724 · Good','ok')">Verify score</button></div>${renderRatesPanel('full')}</div></div>${renderBottomTabs('bank')}`;
+}
+
+function renderAdminDashboard() {
+  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter"><span class="label">Admin workspace</span><h1 class="font-display font-extrabold text-ink" style="font-size:32px;">Platform control center</h1><div class="v2-kpis">${[['Registered users','12,840'],['Partner banks','24'],['Scores this month','8,312'],['Audit events','2,048']].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--accent);">${value}</div></div>`).join('')}</div><div class="db-grid"><div class="cdna-card" style="padding:22px;"><div class="label">Management</div><button class="btn-outline btn-full" style="margin-bottom:10px;" onclick="toast('Role management is protected by Supabase RLS','info')">Manage user roles</button><button class="btn-outline btn-full" style="margin-bottom:10px;" onclick="toast('Bank onboarding queue opened (demo)','info')">Manage bank institutions</button><button class="btn-outline btn-full" onclick="toast('Audit log export requested (demo)','info')">View audit logs</button><div class="label" style="margin-top:20px;">Adjust demo good-tier rate</div><input id="v2-good-rate" value="${V2.rateOverride?.good || currentCountry().rate}"><button class="btn-primary btn-full" style="margin-top:10px;" onclick="window._saveDemoRate()">Save demo rate</button></div>${renderRatesPanel('full')}</div></div>${renderBottomTabs('admin')}`;
+}
+
+window._saveDemoRate = () => { V2.rateOverride = { ...(V2.rateOverride || {}), good: document.getElementById('v2-good-rate').value }; toast('Demo rate table updated for this session', 'ok'); renderAdminDashboard(); };
+
+function renderBottomTabs(role) { return `<div class="v2-bottom-tabs"><button class="nav-link active" onclick="window._go('${role === 'user' ? 'dashboard' : role}')">Overview</button><button class="nav-link" onclick="window._go('pricing')">Rates</button><button class="nav-link" onclick="window._logout()">Sign out</button></div>`; }
+
 let mmOpen = false;
 window._toggleMM = () => { mmOpen = !mmOpen; const el = document.getElementById('mobile-menu'); if (el) el.classList.toggle('open', mmOpen); };
 
 function renderNav(page, go) {
   const user = DB.me();
+  const role = currentRole();
   const linksEl = document.getElementById('nav-links');
   const logoEl = document.getElementById('logo-btn');
   if (logoEl) logoEl.onclick = () => window._go('landing');
   if (!linksEl) return;
 
   const lnk = (id, label) => `<button class="nav-link${page === id ? ' active' : ''}" onclick="window._go('${id}')">${label}</button>`;
-  let h = lnk('landing', 'Home') + lnk('how', 'How It Works') + lnk('pricing', 'For Banks');
+  let h = lnk('landing', t('home')) + lnk('how', t('how')) + lnk('pricing', t('rates'));
   if (user) {
-    h += lnk('dashboard', 'Dashboard') + lnk('check', 'My Score') + lnk('ocr', 'OCR');
+    h += lnk(role === 'user' ? 'dashboard' : role, role === 'user' ? 'Dashboard' : role === 'bank' ? 'Bank Desk' : 'Admin');
+    if (role === 'user') h += lnk('check', 'My Score') + lnk('ocr', 'OCR');
     h += `<button class="btn-danger btn-sm" onclick="window._logout()">Sign out</button>`;
   } else {
-    h += lnk('login', 'Sign In');
-    h += `<button class="btn-primary btn-sm" onclick="window._go('register')">Get Started</button>`;
+    h += lnk('login', t('signIn'));
+    h += `<button class="btn-primary btn-sm" onclick="window._go('register')">${t('getStarted')}</button>`;
   }
+  h += renderLocaleControls();
   h += `<button id="theme-toggle" onclick="window._toggleTheme()" style="width:36px;height:36px;border-radius:9px;background:var(--bg-alt);border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .2s;" title="Toggle dark mode">${document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'}</button>`;
   linksEl.innerHTML = h;
   const mmEl = document.getElementById('mobile-menu');
 if (mmEl) {
   const lnkMM = (id, label) => 
     `<button class="mm-item" onclick="window._go('${id}');window._toggleMM()">${label}</button>`;
-  let mm = lnkMM('landing','🏠 Home') + lnkMM('how','⚙️ How It Works') + lnkMM('pricing','🏦 For Banks');
+  let mm = lnkMM('landing',`🏠 ${t('home')}`) + lnkMM('how',`⚙️ ${t('how')}`) + lnkMM('pricing',`🏦 ${t('rates')}`);
   if (user) {
-    mm += lnkMM('dashboard','📊 Dashboard') + lnkMM('check','🎯 My Score') + lnkMM('ocr','📸 OCR Scanner');
+    mm += lnkMM(role === 'user' ? 'dashboard' : role, role === 'user' ? '📊 Dashboard' : role === 'bank' ? '🏦 Bank Desk' : '🛡️ Admin');
+    if (role === 'user') mm += lnkMM('check','🎯 My Score') + lnkMM('ocr','📸 OCR Scanner');
     mm += `<button class="mm-item" style="color:#c0392b;" onclick="window._logout();window._toggleMM()">Sign Out</button>`;
   } else {
-    mm += lnkMM('login','Sign In');
-    mm += lnkMM('register','Get Started →');
+    mm += lnkMM('login',t('signIn'));
+    mm += lnkMM('register',`${t('getStarted')} →`);
   }
+  mm += `<div style="display:flex;gap:8px;padding:10px 14px;">${renderLocaleControls(true)}</div>`;
   mm += `<button class="mm-item" onclick="window._toggleTheme();window._toggleMM()" style="display:flex;align-items:center;gap:10px;"><span id="mm-theme-icon">${document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙'}</span><span id="mm-theme-label">${document.documentElement.dataset.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span></button>`;
   mmEl.innerHTML = mm;
 }
   window._go = go;
-  window._logout = () => { doLogout(); window._go('landing'); };
+  window._logout = () => { if (supabaseClient) supabaseClient.auth.signOut(); doLogout(); window._go('landing'); };
 }
 
 const PAGES = {
   landing: go => renderLanding(go),
   how: go => renderHow(go),
-  pricing: go => renderPricing(go),
-  login: go => renderLogin(go),
-  register: go => renderRegister(go),
-  dashboard: go => renderDashboard(go),
+  pricing: () => renderRoleRates(),
+  login: go => renderRoleLogin(go),
+  register: go => renderRoleLogin(go),
+  dashboard: go => renderRoleDashboard(go),
+  bank: () => renderBankDashboard(),
+  admin: () => renderAdminDashboard(),
   check: go => renderCheck(go),
   ocr: go => renderOCR(go),
   transactions: go => renderTransactions(go),
@@ -1699,8 +1821,9 @@ let PAGE = 'landing';
 
 function go(page) {
   stopHeroDNAIfRunning();
-  const protected_ = ['dashboard','check','ocr','transactions','profile'];
+  const protected_ = ['dashboard','check','ocr','transactions','profile','bank','admin'];
   if (protected_.includes(page) && !DB.me()) { toast('Sign in first', 'err'); page = 'login'; }
+  if ((page === 'bank' || page === 'admin') && currentRole() !== page) { toast('This area is restricted to the selected role', 'err'); page = 'login'; }
   PAGE = page;
   window.scrollTo({ top: 0, behavior: 'smooth' });
   history.pushState({ page }, '', `#${page}`);

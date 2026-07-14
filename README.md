@@ -78,9 +78,23 @@ There is **no** Node/Java API in this repository. Endpoints such as `https://api
 
 ```
 CreditDNA/
-├── index.html    # Full application
+├── index.html             # SPA, locale/country controls, role-aware views, and 3D currency strand
+├── supabase/
+│   ├── config.js          # Paste the browser-safe Supabase publishable key here
+│   └── schema.sql         # Auth profile, role, RLS, audit, and demo rate schema
+├── V2_SETUP.md            # Live Supabase setup and temporary account provisioning
 └── README.md
 ```
+
+## v2 role and country demo
+
+- **User** â€” score and on-device UPI/OCR journey, with summary demo rates.
+- **Bank** â€” institution-ID login, applicant verification UI, portfolio metrics, and full demo rate table.
+- **Admin** â€” platform metrics, role-management controls, audit-log entry point, and rate-table controls.
+- **Language** â€” English, Hindi, Tamil, Telugu, and Bengali are available as app state. Full translated copy is the next content pass.
+- **Country** â€” India, United States, United Kingdom, and UAE drive the displayed currency/rate context. The Three.js hero visual now includes a rotating pool of 30 currency/flag nodes and highlights the selected country.
+
+Live authentication requires the actual `sb_publishable_...` key and the one-time steps in `V2_SETUP.md`. Never add a Supabase `service_role` key to this frontend.
 
 ## Contributing
 
