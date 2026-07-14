@@ -44,7 +44,7 @@ tailwind.config = {
   --stats-bg: #1a1208; --stats-text: rgba(250,246,236,0.5); --auth-left-bg: #1a1208; --auth-right-bg: #ffffff; --api-box-bg: #1a1208;
   --progress-track: #f5f0e8; --badge-accent-bg: #fff0e8; --badge-green-bg: #e8f5ef; --msg-err-bg: #fdecea; --msg-ok-bg: #e8f5ef;
   --footer-bg: transparent; --scrollbar-track: #fffef9; --scrollbar-thumb: #d4c9b5; --privacy-box-bg: #fff0e8; --auth-text: #faf6ec; --auth-footer: rgba(250,246,236,.2); --on-dark: #fffef9; --logo-bg: #0a1f0a;
-  --feature-orange: #fff0e8; --feature-green: #e8f5ef; --feature-blue: #e8f0fb; --feature-yellow: #fef8e6; --feature-red: #fff0ed;
+  --feature-orange: #fff0e8; --feature-green: #e8f5ef; --feature-blue: #e8f0fb; --feature-yellow: #fef8e6; --feature-red: #fff0ed; --helix-connector: #d4500f;
 }
 
 html[data-theme="dark"] {
@@ -57,7 +57,7 @@ html[data-theme="dark"] {
   --stats-bg: #030a03; --stats-text: rgba(160,184,160,0.5); --auth-left-bg: #030a03; --auth-right-bg: #050d05; --api-box-bg: #030a03;
   --progress-track: rgba(255,255,255,0.06); --badge-accent-bg: rgba(212,80,15,0.15); --badge-green-bg: rgba(34,197,94,0.1); --msg-err-bg: rgba(192,57,43,0.12); --msg-ok-bg: rgba(15,126,90,0.12);
   --footer-bg: #030a03; --scrollbar-track: #050d05; --scrollbar-thumb: rgba(34,197,94,0.3); --privacy-box-bg: rgba(212,80,15,0.1);
-  --feature-orange: rgba(212,80,15,0.12); --feature-green: rgba(15,126,90,0.14); --feature-blue: rgba(29,95,168,0.14); --feature-yellow: rgba(180,83,9,0.14); --feature-red: rgba(192,57,43,0.12); --auth-text: #e8f0e8; --auth-footer: rgba(160,184,160,.2); --on-dark: #e8f0e8; --logo-bg: #020702;
+  --feature-orange: rgba(212,80,15,0.12); --feature-green: rgba(15,126,90,0.14); --feature-blue: rgba(29,95,168,0.14); --feature-yellow: rgba(180,83,9,0.14); --feature-red: rgba(192,57,43,0.12); --helix-connector: #22c55e; --auth-text: #e8f0e8; --auth-footer: rgba(160,184,160,.2); --on-dark: #e8f0e8; --logo-bg: #020702;
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -161,7 +161,10 @@ html[data-theme="dark"] .cdna-card [style*="background:var(--bg-input)"] { backg
 .v2-rate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:14px; }
 .v2-bottom-tabs { display:none; }
 @media (max-width:768px) { .v2-kpis { grid-template-columns:1fr 1fr; } .v2-bottom-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:45; justify-content:space-around; padding:8px; background:var(--bg-nav); border-top:1px solid var(--border); backdrop-filter:blur(12px); } .v2-shell { padding-bottom:82px; } }
-@media (max-width:520px) { .role-tabs { flex-direction:column; } .v2-kpis { grid-template-columns:1fr 1fr; } }
+@media (max-width:768px) { .db-grid, .grid-2 { grid-template-columns:1fr; } .auth-right { max-height:none; } #dna-canvas { opacity:.65; width:44%; } pre { max-width:100%; } }
+@media (max-width:600px) { .grid-3, .grid-4 { grid-template-columns:1fr; } .section { padding:56px 0; } .cdna-card { border-radius:14px; } .btn-lg { width:100%; } }
+@media (max-width:520px) { .role-tabs { flex-direction:column; } .v2-kpis { grid-template-columns:1fr 1fr; } .v2-shell { padding:22px 16px 82px; } h1 { overflow-wrap:anywhere; } input, select, textarea { min-width:0; } }
+@media (max-width:390px) { .v2-kpis { grid-template-columns:1fr; } .wrap { padding-left:14px; padding-right:14px; } .btn-primary, .btn-outline, .btn-danger { white-space:normal; } }
 </style>
 </head>
 <body class="bg-[#fffef9] font-body text-ink antialiased overflow-x-hidden">
@@ -236,6 +239,7 @@ function applyTheme(theme) {
   localStorage.setItem(THEME_KEY, theme);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#050d05' : '#fffef9');
   normalizeInlineThemeColors();
+  window.dispatchEvent(new Event('cdna-theme-change'));
 }
 
 window._toggleTheme = function() {
@@ -1492,7 +1496,7 @@ function initDNA(canvas) {
     metalness: 0.28,
     roughness: 0.32,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0,
   });
   const matStrandB = new THREE.MeshStandardMaterial({
     color: 0x15803d,
@@ -1501,34 +1505,31 @@ function initDNA(canvas) {
     metalness: 0.22,
     roughness: 0.38,
     transparent: true,
-    opacity: 0.94,
+    opacity: 0,
   });
 
   const tubeSegs = 220;
-  const tubeRad = 0.052;
+  const tubeRad = 0.001;
   helix.add(new THREE.Mesh(new THREE.TubeGeometry(curveA, tubeSegs, tubeRad, 10, false), matStrandA));
   helix.add(new THREE.Mesh(new THREE.TubeGeometry(curveB, tubeSegs, tubeRad, 10, false), matStrandB));
 
   const rungGeo = new THREE.CylinderGeometry(0.032, 0.032, 1, 8);
   rungGeo.rotateZ(Math.PI / 2);
   const matRung = new THREE.MeshStandardMaterial({
-    color: 0x86efac,
-    emissive: 0x14532d,
-    emissiveIntensity: 0.42,
-    metalness: 0.12,
-    roughness: 0.48,
+    color: getComputedStyle(document.documentElement).getPropertyValue('--helix-connector').trim(),
+    emissive: getComputedStyle(document.documentElement).getPropertyValue('--helix-connector').trim(),
+    emissiveIntensity: 0.28,
+    metalness: 0.18,
+    roughness: 0.35,
     transparent: true,
-    opacity: 0.78,
+    opacity: 0.86,
   });
-  const matRungAccent = new THREE.MeshStandardMaterial({
-    color: 0xd4500f,
-    emissive: 0x431407,
-    emissiveIntensity: 0.55,
-    metalness: 0.25,
-    roughness: 0.4,
-    transparent: true,
-    opacity: 0.88,
-  });
+  const updateConnectorColor = () => {
+    const connector = getComputedStyle(document.documentElement).getPropertyValue('--helix-connector').trim();
+    matRung.color.set(connector);
+    matRung.emissive.set(connector);
+  };
+  window.addEventListener('cdna-theme-change', updateConnectorColor);
 
   const PAIRS = 26;
   const xAxis = new THREE.Vector3(1, 0, 0);
@@ -1553,27 +1554,18 @@ function initDNA(canvas) {
     const dir = b.clone().sub(a);
     const len = dir.length();
     dir.normalize();
-    const rung = new THREE.Mesh(rungGeo, p % 5 === 0 ? matRungAccent : matRung);
+    const rung = new THREE.Mesh(rungGeo, matRung);
     rung.position.copy(mid);
     rung.scale.set(len, 1, 1);
     rung.quaternion.setFromUnitVectors(xAxis, dir);
     helix.add(rung);
-    const currency = V2.currencies[p % V2.currencies.length];
-    const badge = currencySprite(currency[1], currency[2], currency[0] === V2.country);
-    badge.position.copy(mid).add(new THREE.Vector3(0, 0.18, 0));
-    helix.add(badge);
-  }
-
-  const beadGeo = new THREE.SphereGeometry(0.062, 10, 10);
-  const steps = 44;
-  for (let i = 0; i <= steps; i++) {
-    const u = i / steps;
-    const ba = new THREE.Mesh(beadGeo, i % 2 ? matStrandB : matStrandA);
-    ba.position.copy(curveA.getPointAt(u));
-    helix.add(ba);
-    const bb = new THREE.Mesh(beadGeo, i % 2 ? matStrandA : matStrandB);
-    bb.position.copy(curveB.getPointAt(u));
-    helix.add(bb);
+    const currencyA = V2.currencies[(p * 2) % V2.currencies.length];
+    const currencyB = V2.currencies[(p * 2 + 1) % V2.currencies.length];
+    const badgeA = currencySprite(currencyA[1], currencyA[2], currencyA[0] === V2.country);
+    const badgeB = currencySprite(currencyB[1], currencyB[2], currencyB[0] === V2.country);
+    badgeA.position.copy(a);
+    badgeB.position.copy(b);
+    helix.add(badgeA, badgeB);
   }
 
   const orbitRing = new THREE.Mesh(
@@ -1655,6 +1647,7 @@ function initDNA(canvas) {
     window._cdnaStopHero3D = null;
     cancelAnimationFrame(frame);
     window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('cdna-theme-change', updateConnectorColor);
     if (ro) ro.disconnect();
     renderer.dispose();
     scene.traverse((obj) => {
@@ -1685,6 +1678,27 @@ const I18N = {
   bn: { home: 'হোম', how: 'কীভাবে কাজ করে', rates: 'হার', signIn: 'সাইন ইন', getStarted: 'শুরু করুন' }
 };
 const t = (key) => (I18N[V2.language] || I18N.en)[key] || I18N.en[key] || key;
+const COPY = {
+  en: {},
+  hi: { 'Sign in to CreditDNA': 'CreditDNA में साइन इन करें', 'Secure access': 'सुरक्षित पहुंच', 'Rates': 'दरें', 'Dashboard': 'डैशबोर्ड', 'Choose File': 'फ़ाइल चुनें', 'Calculate My Score →': 'मेरा स्कोर निकालें →', 'Generate Your Score': 'अपना स्कोर बनाएं', 'OCR Scanner': 'OCR स्कैनर' },
+  ta: { 'Sign in to CreditDNA': 'CreditDNA-இல் உள்நுழையவும்', 'Secure access': 'பாதுகாப்பான அணுகல்', 'Rates': 'விகிதங்கள்', 'Dashboard': 'டாஷ்போர்டு', 'Choose File': 'கோப்பை தேர்ந்தெடுக்கவும்', 'Generate Your Score': 'உங்கள் மதிப்பெண்ணை உருவாக்கவும்', 'OCR Scanner': 'OCR ஸ்கேனர்' },
+  te: { 'Sign in to CreditDNA': 'CreditDNAకి సైన్ ఇన్ చేయండి', 'Secure access': 'సురక్షిత యాక్సెస్', 'Rates': 'రేట్లు', 'Dashboard': 'డాష్‌బోర్డ్', 'Choose File': 'ఫైల్ ఎంచుకోండి', 'Generate Your Score': 'మీ స్కోర్ రూపొందించండి', 'OCR Scanner': 'OCR స్కానర్' },
+  bn: { 'Sign in to CreditDNA': 'CreditDNA-তে সাইন ইন করুন', 'Secure access': 'নিরাপদ প্রবেশাধিকার', 'Rates': 'হার', 'Dashboard': 'ড্যাশবোর্ড', 'Choose File': 'ফাইল বেছে নিন', 'Generate Your Score': 'আপনার স্কোর তৈরি করুন', 'OCR Scanner': 'OCR স্ক্যানার' }
+};
+const tCopy = (copy) => (COPY[V2.language] || {})[copy] || copy;
+function translateRenderedCopy(root = document) {
+  root.querySelectorAll('input[placeholder], textarea[placeholder], [title]').forEach((element) => {
+    if (element.placeholder) element.placeholder = tCopy(element.placeholder);
+    if (element.title) element.title = tCopy(element.title);
+  });
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = []; let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  nodes.forEach((textNode) => {
+    const copy = textNode.nodeValue.trim();
+    if (copy && !textNode.parentElement.closest('script,style,pre,code')) textNode.nodeValue = textNode.nodeValue.replace(copy, tCopy(copy));
+  });
+}
 
 const supabaseConfig = window.CREDITDNA_SUPABASE_CONFIG || {};
 const hasLiveSupabase = Boolean(supabaseConfig.url && /^sb_publishable_/.test(supabaseConfig.publishableKey || ''));
@@ -1695,7 +1709,7 @@ const demoRates = () => [
   ['Excellent', V2.rateOverride?.excellent || '8.5%–9.75%'], ['Good', V2.rateOverride?.good || currentCountry().rate], ['Fair', V2.rateOverride?.fair || '11.5%–14.0%'], ['NRE / NRO', V2.rateOverride?.nri || '8.75%–10.5%']
 ];
 
-window._setLanguage = (language) => { V2.language = language; renderNav(PAGE, go); toast(`Language: ${V2.languages[language]}`, 'ok'); };
+window._setLanguage = (language) => { V2.language = language; (PAGES[PAGE] || PAGES.landing)(go); renderNav(PAGE, go); translateRenderedCopy(); toast(`Language: ${V2.languages[language]}`, 'ok'); };
 window._setCountry = (country) => { V2.country = country; if (PAGE === 'landing') renderLanding(go); renderNav(PAGE, go); toast(`${currentCountry().label} rates selected`, 'ok'); };
 
 function renderLocaleControls(compact = false) {
@@ -1844,11 +1858,12 @@ const hashPage = window.location.hash.replace('#', '') || 'landing';
 document.addEventListener('DOMContentLoaded', () => {
   const observer = new MutationObserver((records) => {
     records.forEach((record) => record.addedNodes.forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) normalizeInlineThemeColors(node);
+      if (node.nodeType === Node.ELEMENT_NODE) { normalizeInlineThemeColors(node); translateRenderedCopy(node); }
     }));
   });
   observer.observe(document.body, { childList: true, subtree: true });
   normalizeInlineThemeColors();
+  translateRenderedCopy();
   go(PAGES[hashPage] ? hashPage : 'landing');
 });
 </script>
