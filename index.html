@@ -1122,13 +1122,28 @@ function _renderAuthForm(go) {
   if (!wrap) return;
   
   if (authTab === 'login') {
+    const role = V2.role || 'user';
     wrap.innerHTML = `
+      <div class="auth-tabs role-tabs" style="margin-bottom:18px;">
+        ${[['user','👤 User'],['bank','🏦 Bank'],['admin','🛡️ Admin']].map(([r,label]) =>
+          `<button type="button" class="auth-tab${role === r ? ' active' : ''}" onclick="V2.role='${r}';window._authSwitch('login')">${label}</button>`
+        ).join('')}
+      </div>
       <div id="lerr"></div>
+      ${role === 'user' ? `
       <div class="field"><label>Email</label><input id="l-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
       <div class="field"><label>Password</label><input id="l-pass" type="password" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')window._loginSubmit()"></div>
       <button class="btn-primary btn-full btn-lg" style="margin-top:8px;border-radius:12px;" onclick="window._loginSubmit()">Sign In →</button>
       <p style="text-align:center;margin-top:18px;font-size:13px;color:#8c7d6a;">Don't have an account? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._authSwitch('register')">Sign up free</span></p>
-      <p style="text-align:center;margin-top:10px;font-size:12px;color:#8c7d6a;">Bank or admin? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._go('institutional-login')">Institutional sign in</span></p>`;
+      ` : `
+      <div id="v2-login-error"></div>
+      <div class="field"><label>${role === 'bank' ? 'Institutional email' : 'Administrator email'}</label><input id="v2-identifier" autocomplete="username" placeholder="${role === 'bank' ? 'bank@creditdna.demo' : 'admin@creditdna.demo'}"></div>
+      ${role === 'bank' ? '<div class="field"><label>Institution ID</label><input id="v2-institution" placeholder="CDNA-BANK-001"></div>' : ''}
+      <div class="field"><label>Password / secure PIN</label><input id="v2-password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')window._v2Login()"></div>
+      ${role === 'admin' ? '<div class="field"><label>Mock 2FA code</label><input id="v2-otp" inputmode="numeric" placeholder="123456"></div>' : ''}
+      <button class="btn-primary btn-full btn-lg" style="margin-top:8px;border-radius:12px;" onclick="window._v2Login()">Continue as ${role === 'bank' ? 'Bank' : 'Admin'} →</button>
+      <p style="font-size:12px;color:var(--ink-3);text-align:center;margin-top:16px;">Demo access: any email and password works locally. Admin 2FA is <strong>123456</strong>.</p>
+      `}`;
 
     window._loginSubmit = () => {
       const email = document.getElementById('l-email').value.trim();
@@ -1449,26 +1464,33 @@ async function startOCR() {
   btn.innerHTML = '⏳ Preparing image…';
   btn.disabled = true;
   const t0 = performance.now();
+  let worker = null;
 
   try {
     const { dataUrls, pdfTotalPages, pdfScannedPages, pdfTruncated } = await getOcrPageImages(file);
     const nPages = dataUrls.length;
     const parts = [];
+    btn.innerHTML = '⏳ Loading OCR engine (first run downloads language data)…';
+    worker = await Tesseract.createWorker('eng', 1, {
+      logger: (ev) => {
+        if (ev.status === 'recognizing text' && typeof ev.progress === 'number') {
+          const pct = Math.round(ev.progress * 100);
+          const pageHint = typeof window._ocrPageHint === 'number' ? window._ocrPageHint : 0;
+          btn.innerHTML = nPages > 1
+            ? `⏳ Page ${pageHint + 1}/${nPages} · OCR ${pct}%`
+            : `⏳ OCR ${pct}%`;
+        }
+      },
+    });
+    if (worker.setParameters && Tesseract.PSM) {
+      await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.AUTO });
+    }
     for (let p = 0; p < nPages; p++) {
+      window._ocrPageHint = p;
       btn.innerHTML = nPages > 1
         ? `⏳ PDF page ${p + 1} of ${nPages}…`
-        : '⏳ Scanning text (first run downloads language data)…';
-      const { data } = await Tesseract.recognize(dataUrls[p], 'eng', {
-        tessedit_pageseg_mode: Tesseract.PSM?.AUTO || '3',
-        logger: (ev) => {
-          if (ev.status === 'recognizing text' && typeof ev.progress === 'number') {
-            const pct = Math.round(ev.progress * 100);
-            btn.innerHTML = nPages > 1
-              ? `⏳ Page ${p + 1}/${nPages} · OCR ${pct}%`
-              : `⏳ OCR ${pct}%`;
-          }
-        },
-      });
+        : '⏳ Scanning text…';
+      const { data } = await worker.recognize(dataUrls[p]);
       const chunk = (data && data.text) ? data.text.trim() : '';
       if (chunk) {
         if (pdfTotalPages > 0) {
@@ -1478,6 +1500,7 @@ async function startOCR() {
         }
       }
     }
+    window._ocrPageHint = null;
 
     let rawText = parts.join('\n\n').trim();
     if (!rawText) {
@@ -1558,8 +1581,14 @@ async function startOCR() {
     const msg = (err && err.message) ? err.message : String(err);
     toast(msg, 'err');
   } finally {
-    btn.innerHTML = '🔍 Extract Text';
-    btn.disabled = false;
+    if (worker) {
+      try { await worker.terminate(); } catch (_) { /* ignore */ }
+    }
+    window._ocrPageHint = null;
+    if (btn) {
+      btn.innerHTML = '🔍 Extract Text';
+      btn.disabled = false;
+    }
   }
 }
 
@@ -1932,7 +1961,7 @@ function renderRoleLogin(go) {
 window._v2Login = async () => {
   const identifier = document.getElementById('v2-identifier').value.trim().toLowerCase();
   const password = document.getElementById('v2-password').value;
-  const error = document.getElementById('v2-login-error');
+  const error = document.getElementById('v2-login-error') || document.getElementById('lerr');
   const expectedInstitution = V2.role === 'bank' ? document.getElementById('v2-institution').value.trim() : '';
   if (!identifier || !password || (V2.role === 'admin' && document.getElementById('v2-otp').value !== '123456')) { error.innerHTML = '<div class="msg-err">Check your credentials and 2FA code.</div>'; return; }
   if (supabaseClient) {
@@ -1995,7 +2024,8 @@ function renderNav(page, go) {
     if (role === 'user') h += lnk('check', 'My Score') + lnk('ocr', 'OCR');
     h += `<button class="btn-danger btn-sm" onclick="window._logout()">Sign out</button>`;
   } else {
-    h += lnk('login', t('signIn'));
+    h += `<button class="nav-link${page === 'login' && (V2.role || 'user') === 'user' ? ' active' : ''}" onclick="V2.role='user';window._go('login')">${t('signIn')}</button>`;
+    h += `<button class="nav-link${page === 'login' && V2.role !== 'user' ? ' active' : ''}" onclick="V2.role='bank';window._go('login')">Bank / Admin</button>`;
     h += `<button class="btn-primary btn-sm" onclick="window._go('register')">${t('getStarted')}</button>`;
   }
   h += renderLocaleControls();
@@ -2012,6 +2042,7 @@ if (mmEl) {
     mm += `<button class="mm-item" style="color:#c0392b;" onclick="window._logout();window._toggleMM()">Sign Out</button>`;
   } else {
     mm += lnkMM('login',t('signIn'));
+    mm += `<button class="mm-item" onclick="V2.role='bank';window._go('login');window._toggleMM()">🏦 Bank / Admin</button>`;
     mm += lnkMM('register',`${t('getStarted')} →`);
   }
   mm += `<div style="display:flex;gap:8px;padding:10px 14px;">${renderLocaleControls(true)}</div>`;
