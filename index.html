@@ -251,6 +251,8 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'light');
 
 const ADMIN_EMAILS = ['simon@creditdna.in', 'mayank@creditdna.in'];
 const OCC_LABELS = { gig: 'Gig Worker', farmer: 'Farmer', student: 'Student', sme: 'Business Owner', daily: 'Daily Wage Worker', freelance: 'Freelancer', salaried: 'Salaried Employee', other: 'Other' };
+const UPI_LABELS = { gpay: 'Google Pay', phonepe: 'PhonePe', paytm: 'Paytm', bhim: 'BHIM' };
+const TXN_LABELS = { low: 'Less than 10/month', med: '10–50/month', high: '50+/month' };
 
 const scoreColor = s => !s ? '#8c7d6a' : s >= 750 ? '#0f7e5a' : s >= 650 ? '#0d7c52' : s >= 550 ? '#d4500f' : '#c0392b';
 const scoreTier = s => !s ? '—' : s >= 750 ? 'Very Good' : s >= 650 ? 'Good' : s >= 550 ? 'Fair' : 'Poor';
@@ -268,6 +270,36 @@ const DB = {
   updateUser: patch => { const users = DB.users(); const i = users.findIndex(u => u.id === patch.id); if (i > -1) { users[i] = { ...users[i], ...patch }; DB.save(users); const me = DB.me(); if (me && me.id === patch.id) DB.setMe(users[i]); return users[i]; } return null; },
   deleteUser: id => { const users = DB.users().filter(u => u.id !== id); DB.save(users); },
 };
+
+/** Merge patch into signed-in user and cdna_users when present; always updates session (cdna_me). */
+function persistCurrentUser(patch) {
+  const me = DB.me();
+  if (!me) return null;
+  const users = DB.users();
+  const i = users.findIndex(u => u.id === me.id);
+  if (i > -1) {
+    users[i] = { ...users[i], ...patch };
+    DB.save(users);
+    DB.setMe(users[i]);
+    return users[i];
+  }
+  const updated = { ...me, ...patch };
+  DB.setMe(updated);
+  return updated;
+}
+
+/** Reload session from cdna_users so dashboard/profile reflect latest score and OCR data. */
+function refreshMeFromUsers() {
+  const me = DB.me();
+  if (!me) return null;
+  const stored = DB.users().find(u => u.id === me.id || (me.email && u.email === me.email));
+  if (stored) {
+    const merged = { ...stored, role: me.role || stored.role || 'user' };
+    DB.setMe(merged);
+    return merged;
+  }
+  return me;
+}
 
 function generateBankApiKey() {
   const bytes = new Uint8Array(20);
@@ -366,48 +398,151 @@ async function getOcrPageImages(file) {
   return { dataUrls: [dataUrl], pdfTotalPages: 0, pdfScannedPages: 1, pdfTruncated: false };
 }
 
+function parseIndianAmount(raw) {
+  if (raw == null) return NaN;
+  const n = parseFloat(String(raw).replace(/,/g, '').replace(/[^\d.]/g, ''));
+  return Number.isNaN(n) ? NaN : n;
+}
+
+function inferTxnType(line, amountToken) {
+  const idx = line.indexOf(amountToken);
+  const after = idx >= 0 ? line.slice(idx + amountToken.length).toLowerCase() : '';
+  const low = line.toLowerCase();
+  if (/\b(dr|debit)\b/.test(after) || /\bdr\.?\s*$/.test(low)) return 'debit';
+  if (/\b(cr|credit)\b/.test(after) || /\bcr\.?\s*$/.test(low)) return 'credit';
+  if (/\b(credit|salary|received|refund|neft cr|imps cr|upi cr)\b/i.test(line)) return 'credit';
+  if (/\b(debit|paid|purchase|withdrawal|neft dr|imps dr|upi dr|to transfer)\b/i.test(line)) return 'debit';
+  if (/\bUPI\/|UPI-/i.test(line)) return /\bcr\b/i.test(line) ? 'credit' : 'debit';
+  return 'debit';
+}
+
+function tryParseStatementLine(line) {
+  const dateM = line.match(/\b(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\b/)
+    || line.match(/\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i);
+  if (!dateM) return null;
+  const amtM = line.match(/(?:₹|Rs\.?\s*)?([\d]{1,3}(?:,\d{2,3})*(?:\.\d{2})|\d+(?:\.\d{2})?)\s*(?:Dr|Cr|DR|CR|Debit|Credit)?\s*(?:\||$)/i)
+    || line.match(/([\d]{1,3}(?:,\d{2,3})*(?:\.\d{2})|\d+(?:\.\d{2})?)\s*(?:Dr|Cr|DR|CR)\b/i);
+  if (!amtM) return null;
+  const amount = parseIndianAmount(amtM[1]);
+  if (Number.isNaN(amount) || amount < 1 || amount > 5e7) return null;
+  const type = inferTxnType(line, amtM[1]);
+  let description = line.replace(dateM[0], '').replace(amtM[0], '').replace(/\s+/g, ' ').trim();
+  if (!description) description = type === 'credit' ? 'Credit' : 'Debit';
+  return { date: dateM[1], description: description.slice(0, 100), amount, type };
+}
+
 function parseStatementFromOcrText(text) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const normalized = text.replace(/\u00a0/g, ' ');
+  const lines = normalized.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const amounts = [];
   const seen = new Set();
   const addAmt = (n) => {
-    if (n >= 0 && n < 1e12 && !seen.has(n)) { seen.add(n); amounts.push(n); }
+    if (n >= 1 && n < 1e12 && !seen.has(n)) { seen.add(n); amounts.push(n); }
   };
   const rupeeRe = /(?:₹|Rs\.?\s*|INR\s*)([\d][\d,]*(?:\.\d{1,2})?)/gi;
   let m;
-  while ((m = rupeeRe.exec(text)) !== null) {
-    const n = parseFloat(m[1].replace(/,/g, ''));
+  while ((m = rupeeRe.exec(normalized)) !== null) {
+    const n = parseIndianAmount(m[1]);
     if (!Number.isNaN(n)) addAmt(n);
   }
-  const decRe = /\b([\d]{1,3}(?:,\d{2,3})*(?:\.\d{2}))\b/g;
-  while ((m = decRe.exec(text)) !== null) {
-    const n = parseFloat(m[1].replace(/,/g, ''));
-    if (!Number.isNaN(n) && n >= 100 && n % 1 !== 0) addAmt(n);
+  const decRe = /\b([\d]{1,3}(?:,\d{2,3})+(?:\.\d{2})|\d+\.\d{2})\b/g;
+  while ((m = decRe.exec(normalized)) !== null) {
+    const n = parseIndianAmount(m[1]);
+    if (!Number.isNaN(n) && n >= 10) addAmt(n);
   }
   amounts.sort((a, b) => b - a);
-  const ifscList = [...text.matchAll(/\b[A-Z]{4}0[A-Z0-9]{6}\b/g)].map(x => x[0]);
+
+  const transactions = [];
+  const txnSeen = new Set();
+  for (const line of lines) {
+    const txn = tryParseStatementLine(line);
+    if (!txn) continue;
+    const key = `${txn.date}|${txn.amount}|${txn.type}|${txn.description.slice(0, 30)}`;
+    if (txnSeen.has(key)) continue;
+    txnSeen.add(key);
+    transactions.push(txn);
+  }
+  if (transactions.length < 2) {
+    const upiBlocks = [...normalized.matchAll(/(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})[^\n]{0,120}?(UPI[\/\-][^\n]{0,80}?)([\d,]+\.\d{2})/gi)];
+    for (const block of upiBlocks) {
+      const amount = parseIndianAmount(block[3]);
+      if (Number.isNaN(amount)) continue;
+      const line = block[0];
+      const type = inferTxnType(line, block[3]);
+      const key = `${block[1]}|${amount}|${type}`;
+      if (txnSeen.has(key)) continue;
+      txnSeen.add(key);
+      transactions.push({ date: block[1], description: (block[2] || 'UPI').trim().slice(0, 100), amount, type });
+    }
+  }
+
+  const ifscList = [...normalized.matchAll(/\b[A-Z]{4}0[A-Z0-9]{6}\b/g)].map(x => x[0]);
   const ifscUnique = [...new Set(ifscList)];
-  const acctMasked = [...text.matchAll(/\b(?:XX+\d{4}|\*{4,}\d{4}|\d{4}\*{4,})\b/g)].slice(0, 3);
-  const dates = [...text.matchAll(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/g)].map(x => x[1]).slice(0, 5);
+  const acctMasked = [...normalized.matchAll(/\b(?:XX+\d{4}|\*{4,}\d{4}|\d{4}\*{4,})\b/g)].slice(0, 3);
+  const dates = [...normalized.matchAll(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/g)].map(x => x[1]).slice(0, 8);
   const flags = {
-    hasUpi: /\bUPI\b|@[a-z0-9._-]+\./i.test(text),
-    hasBankKeywords: /\b(balance|statement|account|credit|debit|transfer|NEFT|RTGS|IMPS)\b/i.test(text),
+    hasUpi: /\bUPI\b|UPI[\/\-]|@[a-z0-9._-]+\./i.test(normalized),
+    hasBankKeywords: /\b(balance|statement|account|credit|debit|transfer|NEFT|RTGS|IMPS|opening|closing)\b/i.test(normalized),
     hasIfsc: ifscUnique.length > 0,
     hasDate: dates.length > 0,
   };
+  const credits = transactions.filter(t => t.type === 'credit');
+  const debits = transactions.filter(t => t.type === 'debit');
   return {
     lineCount: lines.length,
-    charCount: text.length,
+    charCount: normalized.length,
     amounts: amounts.slice(0, 12),
     ifsc: ifscUnique.slice(0, 3),
     dates,
     acctHints: acctMasked.map(x => x[0]),
     flags,
     previewLines: lines.slice(0, 8),
+    transactions: transactions.slice(0, 200),
+    totalCredit: credits.reduce((a, t) => a + t.amount, 0),
+    totalDebit: debits.reduce((a, t) => a + t.amount, 0),
+    creditCount: credits.length,
+    debitCount: debits.length,
+  };
+}
+
+function scoreFactorsFromOcr(ins) {
+  const txns = ins.transactions || [];
+  const credits = txns.filter(t => t.type === 'credit');
+  const debits = txns.filter(t => t.type === 'debit');
+  const totalCr = ins.totalCredit || 0;
+  const totalDr = ins.totalDebit || 0;
+  const flow = totalCr + totalDr;
+  const regularity = txns.length ? Math.min(100, 40 + txns.length * 3) : (ins.flags.hasDate ? 55 : 35);
+  const incomeStability = flow > 0 ? Math.min(100, Math.round(50 + (totalCr / flow) * 50)) : 45;
+  const merchantDiversity = Math.min(100, 30 + new Set(txns.map(t => t.description.split(/[\s/@-]+/)[0].toLowerCase())).size * 8);
+  const upiTenure = ins.flags.hasUpi ? Math.min(100, 45 + Math.min(40, txns.length * 2)) : 40;
+  return {
+    paymentRegularity: Math.min(100, regularity + (debits.length > credits.length ? 5 : 0)),
+    incomeStability,
+    merchantDiversity,
+    upiTenure,
+    upiFrequency: Math.min(100, 25 + txns.length * 4),
   };
 }
 
 function scoreFromOcrInsights(ins) {
+  const txns = ins.transactions || [];
+  if (txns.length >= 2) {
+    const credits = txns.filter(t => t.type === 'credit');
+    const totalCr = ins.totalCredit || 0;
+    const totalDr = ins.totalDebit || 0;
+    const flow = totalCr + totalDr;
+    let pts = 310;
+    pts += Math.min(150, txns.length * 6);
+    pts += Math.min(90, credits.length * 10);
+    if (flow > 0) pts += Math.round((totalCr / flow) * 70);
+    const avgCr = credits.length ? totalCr / credits.length : 0;
+    if (avgCr > 0) pts += Math.min(60, Math.log10(avgCr + 1) * 14);
+    if (ins.flags.hasUpi) pts += 28;
+    if (ins.flags.hasBankKeywords) pts += 22;
+    if (ins.flags.hasIfsc) pts += 15;
+    return Math.min(900, Math.max(300, Math.round(pts)));
+  }
   const { lineCount, charCount, amounts, flags } = ins;
   const amountCount = amounts.length;
   const maxAmount = amounts[0] || 0;
@@ -425,12 +560,15 @@ function scoreFromOcrInsights(ins) {
 
 function insightBulletsFromParsed(ins) {
   const out = [];
-  if (ins.amounts.length) out.push(`Found ${ins.amounts.length} likely currency value(s)`);
+  if (ins.transactions?.length) {
+    out.push(`Parsed ${ins.transactions.length} transaction line(s) from statement`);
+    out.push(`Credits: ${ins.creditCount || 0} (₹${(ins.totalCredit || 0).toLocaleString('en-IN')}) · Debits: ${ins.debitCount || 0}`);
+  } else if (ins.amounts.length) out.push(`Found ${ins.amounts.length} likely currency value(s)`);
   else out.push('No obvious ₹ / Rs amounts — check raw text below');
   if (ins.flags.hasUpi) out.push('UPI-style references detected');
   if (ins.flags.hasBankKeywords) out.push('Bank / statement keywords found');
   if (ins.ifsc.length) out.push(`IFSC-like codes: ${ins.ifsc.join(', ')}`);
-  if (ins.dates.length) out.push(`Date-like strings: ${ins.dates.slice(0, 3).join(', ')}`);
+  if (ins.dates.length && !ins.transactions?.length) out.push(`Date-like strings: ${ins.dates.slice(0, 3).join(', ')}`);
   if (!ins.flags.hasBankKeywords && ins.lineCount < 5) out.push('Very little text — try a sharper photo or higher contrast');
   while (out.length < 4) out.push('Review extracted text for your own details');
   return out.slice(0, 4);
@@ -446,7 +584,7 @@ function doLogin(email, password) {
 function doRegister(data) {
   if (DB.findByEmail(data.email)) { toast('This email is already registered', 'err'); return false; }
   const isAdm = ADMIN_EMAILS.includes(data.email.toLowerCase());
-  const user = { id: Date.now(), name: data.name, email: data.email.toLowerCase(), password: data.password, phone: data.phone || '', occ: data.occ, txn: data.txn, upiApp: data.upiApp, isAdmin: isAdm, score: null, bankApiKey: null, joined: new Date().toISOString() };
+  const user = { id: Date.now(), name: data.name, email: data.email.toLowerCase(), password: data.password || data.pass, phone: data.phone || '', occ: data.occ, txn: data.txn, upiApp: data.upiApp, role: 'user', isAdmin: isAdm, score: null, scoreFactors: null, transactions: [], bankApiKey: null, joined: new Date().toISOString() };
   const users = DB.users();
   users.push(user);
   DB.save(users);
@@ -989,7 +1127,8 @@ function _renderAuthForm(go) {
       <div class="field"><label>Email</label><input id="l-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
       <div class="field"><label>Password</label><input id="l-pass" type="password" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')window._loginSubmit()"></div>
       <button class="btn-primary btn-full btn-lg" style="margin-top:8px;border-radius:12px;" onclick="window._loginSubmit()">Sign In →</button>
-      <p style="text-align:center;margin-top:18px;font-size:13px;color:#8c7d6a;">Don't have an account? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._authSwitch('register')">Sign up free</span></p>`;
+      <p style="text-align:center;margin-top:18px;font-size:13px;color:#8c7d6a;">Don't have an account? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._authSwitch('register')">Sign up free</span></p>
+      <p style="text-align:center;margin-top:10px;font-size:12px;color:#8c7d6a;">Bank or admin? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._go('institutional-login')">Institutional sign in</span></p>`;
 
     window._loginSubmit = () => {
       const email = document.getElementById('l-email').value.trim();
@@ -1072,7 +1211,7 @@ function _renderAuthForm(go) {
       } else {
         if (!document.getElementById('r-consent').checked) { err.innerHTML = '<div class="msg-err">Accept privacy policy</div>'; return; }
         Object.assign(RD, { upiApp: document.getElementById('r-upi').value });
-        const user = doRegister(RD);
+        const user = doRegister({ ...RD, password: RD.pass });
         if (!user) return;
         go('dashboard');
       }
@@ -1080,8 +1219,24 @@ function _renderAuthForm(go) {
   }
 }
 
+function dashboardFactorRows(u, scoreColorVal) {
+  const f = u.scoreFactors;
+  const c = scoreColorVal;
+  const rows = f
+    ? [['Payment Regularity', f.paymentRegularity], ['Income Stability', f.incomeStability], ['Merchant Diversity', f.merchantDiversity], ['UPI Tenure', f.upiTenure ?? f.upiFrequency]]
+    : [['Payment Regularity', 94], ['Income Stability', 81], ['Merchant Diversity', 88], ['UPI Tenure', 76]];
+  return rows.map(([lbl, val]) => `
+            <div style="background:#faf8f3;border-radius:10px;padding:12px;">
+              <div style="font-size:12px;color:#8c7d6a;margin-bottom:4px;">${lbl}</div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                <span class="font-display font-bold" style="font-size:20px;color:${c};">${Math.round(val)}</span>
+                <span style="font-size:11px;color:#8c7d6a;">/100</span>
+              </div>
+            </div>`).join('');
+}
+
 function renderDashboard(go) {
-  const u = DB.me();
+  const u = refreshMeFromUsers();
   if (!u) { go('login'); return; }
   const s = u.score, c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
 
@@ -1118,15 +1273,7 @@ function renderDashboard(go) {
           <div style="display:flex;justify-content:space-between;font-size:12px;color:#8c7d6a;margin-bottom:6px;"><span>300 — Poor</span><span>900 — Excellent</span></div>
           <div class="progress-bar" style="margin-bottom:20px;"><div class="progress-fill" id="db-pfill" style="width:0;background:${c};"></div></div>
           <div class="grid-2" style="gap:12px;">
-            ${[['Payment Regularity','94'],['Income Stability','81'],['Merchant Diversity','88'],['UPI Tenure','76']]
-              .map(([lbl,val]) => `
-            <div style="background:#faf8f3;border-radius:10px;padding:12px;">
-              <div style="font-size:12px;color:#8c7d6a;margin-bottom:4px;">${lbl}</div>
-              <div style="display:flex;align-items:baseline;gap:6px;">
-                <span class="font-display font-bold" style="font-size:20px;color:${c};">${val}</span>
-                <span style="font-size:11px;color:#8c7d6a;">/100</span>
-              </div>
-            </div>`).join('')}
+            ${dashboardFactorRows(u, c)}
           </div>` : `
           <div style="text-align:center;padding:40px 0;"><div style="font-size:48px;margin-bottom:16px;">🎯</div>
             <h3 class="font-display font-bold text-ink mb-2" style="font-size:20px;">No score yet</h3>
@@ -1153,8 +1300,8 @@ function renderDashboard(go) {
     <div class="cdna-card" style="padding:22px;">
       <div class="label">Your Profile</div>
       <div style="display:flex;flex-wrap:wrap;gap:20px;">
-        ${[['Occupation',OCC_LABELS[u.occ]||'—'],['UPI App',u.upiApp||'—'],['Monthly Tx',u.txn||'—'],['Member',new Date(u.joined).toLocaleDateString('en-IN',{month:'short',year:'numeric'})]]
-          .map(([k,v]) => `<div style="min-width:140px;"><div style="font-size:12px;color:#8c7d6a;margin-bottom:2px;">${k}</div><div style="font-size:14px;font-weight:600;color:#1a1208;text-transform:capitalize;">${v}</div></div>`).join('')}
+        ${[['Occupation',OCC_LABELS[u.occ]||'—'],['UPI App',UPI_LABELS[u.upiApp]||u.upiApp||'—'],['Monthly Tx',TXN_LABELS[u.txn]||u.txn||'—'],['Member',u.joined ? new Date(u.joined).toLocaleDateString('en-IN',{month:'short',year:'numeric'}) : '—']]
+          .map(([k,v]) => `<div style="min-width:140px;"><div style="font-size:12px;color:#8c7d6a;margin-bottom:2px;">${k}</div><div style="font-size:14px;font-weight:600;color:#1a1208;">${escapeHTML(String(v))}</div></div>`).join('')}
       </div>
     </div>
   </div>`;
@@ -1194,8 +1341,14 @@ function renderCheck(go) {
     const s = Math.min(900, Math.max(300, Math.round(300 + (avg/10)*600)));
     const c = scoreColor(s), tier = scoreTier(s), pct = scorePct(s);
 
-    const users = DB.users(), i = users.findIndex(u2 => u2.id === u.id);
-    if (i > -1) { users[i].score = s; DB.save(users); DB.setMe(users[i]); }
+    const scoreFactors = {
+      paymentRegularity: vals[1] * 10,
+      upiFrequency: vals[0] * 10,
+      merchantDiversity: vals[2] * 10,
+      incomeStability: vals[3] * 10,
+      upiTenure: vals[4] * 10,
+    };
+    persistCurrentUser({ score: s, scoreFactors });
 
     document.getElementById('score-form').style.display = 'none';
     const res = document.getElementById('score-result');
@@ -1306,6 +1459,7 @@ async function startOCR() {
         ? `⏳ PDF page ${p + 1} of ${nPages}…`
         : '⏳ Scanning text (first run downloads language data)…';
       const { data } = await Tesseract.recognize(dataUrls[p], 'eng', {
+        tessedit_pageseg_mode: Tesseract.PSM?.AUTO || '3',
         logger: (ev) => {
           if (ev.status === 'recognizing text' && typeof ev.progress === 'number') {
             const pct = Math.round(ev.progress * 100);
@@ -1346,14 +1500,12 @@ async function startOCR() {
 
     toast(`✅ OCR complete<br>${fieldApprox}+ signals · ${pageNote} · ${secs}s`, 'ok');
 
-    const u = DB.me();
-    const users = DB.users();
-    const i = users.findIndex(user => user.id === u.id);
-    if (i > -1) {
-      users[i].score = derivedScore;
-      DB.save(users);
-      DB.setMe(users[i]);
-    }
+    const scoreFactors = scoreFactorsFromOcr(parsed);
+    persistCurrentUser({
+      score: derivedScore,
+      scoreFactors,
+      transactions: parsed.transactions?.length ? parsed.transactions : (DB.me()?.transactions || []),
+    });
 
     const amountsHtml = parsed.amounts.length
       ? parsed.amounts.slice(0, 6).map(a => `<span style="display:inline-block;margin:4px 8px 0 0;padding:6px 10px;background:#fff;border-radius:8px;border:1px solid #e8e0d0;font-weight:600;">₹${a.toLocaleString('en-IN')}</span>`).join('')
@@ -1390,9 +1542,14 @@ async function startOCR() {
           <pre style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#4a3f30;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;">${escapeHTML(rawText)}</pre>
         </details>
 
-        <button onclick="window._go('dashboard')" class="btn-primary btn-full" style="border-radius:12px;">
-          Add to Dashboard →
-        </button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="window._go('dashboard')" class="btn-primary" style="flex:1;border-radius:12px;min-width:140px;">
+            View Dashboard →
+          </button>
+          <button onclick="window._go('transactions')" class="btn-outline" style="flex:1;border-radius:12px;min-width:140px;">
+            See payments →
+          </button>
+        </div>
       </div>`;
 
     document.getElementById('success-panel').style.display = 'block';
@@ -1407,32 +1564,73 @@ async function startOCR() {
 }
 
 function renderTransactions(go) {
-  const u = DB.me();
+  const u = refreshMeFromUsers();
   if (!u) { go('login'); return; }
+  const txns = u.transactions || [];
+  const totalCr = txns.filter(t => t.type === 'credit').reduce((a, t) => a + t.amount, 0);
+  const totalDr = txns.filter(t => t.type === 'debit').reduce((a, t) => a + t.amount, 0);
+
   document.getElementById('app').innerHTML = `
   <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px;max-width:900px;margin:0 auto;">
-    <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">💳 Transactions</h1>
-    <div class="cdna-card" style="padding:56px 32px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">📊</div>
-      <h3 class="font-display font-bold text-ink mb-3" style="font-size:22px;">Coming soon</h3>
-      <p style="color:#8c7d6a;">Your transaction history will appear here.</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1 class="font-display font-extrabold text-ink mb-1" style="font-size:clamp(22px,4vw,30px);">💳 Transactions</h1>
+        <p style="font-size:14px;color:#8c7d6a;">${txns.length ? `${txns.length} entries from your latest statement scan` : 'Upload a bank statement via OCR to populate payments'}</p>
+      </div>
+      <button class="btn-outline btn-sm" onclick="window._go('ocr')">📄 Scan statement</button>
     </div>
+    ${txns.length ? `
+    <div class="grid-2" style="gap:14px;margin-bottom:20px;">
+      <div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:#8c7d6a;">Total credits</div><div class="font-display font-bold" style="font-size:24px;color:#0f7e5a;">₹${totalCr.toLocaleString('en-IN')}</div></div>
+      <div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:#8c7d6a;">Total debits</div><div class="font-display font-bold" style="font-size:24px;color:#d4500f;">₹${totalDr.toLocaleString('en-IN')}</div></div>
+    </div>
+    <div class="cdna-card" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#faf8f3;text-align:left;">
+            <th style="padding:12px 14px;color:#8c7d6a;font-weight:600;">Date</th>
+            <th style="padding:12px 14px;color:#8c7d6a;font-weight:600;">Description</th>
+            <th style="padding:12px 14px;color:#8c7d6a;font-weight:600;">Type</th>
+            <th style="padding:12px 14px;color:#8c7d6a;font-weight:600;text-align:right;">Amount</th>
+          </tr></thead>
+          <tbody>
+            ${txns.map(t => `
+            <tr style="border-top:1px solid #f5f0e8;">
+              <td style="padding:12px 14px;white-space:nowrap;">${escapeHTML(t.date)}</td>
+              <td style="padding:12px 14px;">${escapeHTML(t.description)}</td>
+              <td style="padding:12px 14px;"><span style="font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;background:${t.type === 'credit' ? '#e8f5ef' : '#fff0e8'};color:${t.type === 'credit' ? '#0f7e5a' : '#d4500f'};">${t.type === 'credit' ? 'Credit' : 'Debit'}</span></td>
+              <td style="padding:12px 14px;text-align:right;font-weight:600;">₹${t.amount.toLocaleString('en-IN')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : `
+    <div class="cdna-card" style="padding:56px 32px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">📊</div>
+      <h3 class="font-display font-bold text-ink mb-3" style="font-size:22px;">No transactions yet</h3>
+      <p style="color:#8c7d6a;margin-bottom:20px;">Use the OCR scanner on a bank or UPI statement PDF/image. Parsed payments will show here and feed your score.</p>
+      <button class="btn-primary" onclick="window._go('ocr')">Open OCR Scanner →</button>
+    </div>`}
+    <div style="margin-top:20px;"><button class="btn-outline" onclick="window._go('dashboard')">← Dashboard</button></div>
   </div>`;
 }
 
 function renderProfile(go) {
-  const u = DB.me();
+  const u = refreshMeFromUsers();
   if (!u) { go('login'); return; }
+  const scoreDisplay = u.score ? `${u.score} (${scoreTier(u.score)})` : 'Not generated';
+  const upiDisplay = UPI_LABELS[u.upiApp] || u.upiApp || '—';
+  const txnDisplay = TXN_LABELS[u.txn] || u.txn || '—';
   document.getElementById('app').innerHTML = `
   <div class="page-enter" style="padding:28px clamp(16px,4vw,28px) 60px;max-width:700px;margin:0 auto;">
     <h1 class="font-display font-extrabold text-ink mb-6" style="font-size:clamp(22px,4vw,28px);">👤 Profile</h1>
     <div class="cdna-card" style="padding:28px;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-        <div style="width:60px;height:60px;border-radius:16px;background:#fff0e8;border:2px solid rgba(212,80,15,.3);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;color:#d4500f;">${escapeHTML(u.name).charAt(0)}</div>
-        <div><div class="font-display font-bold text-ink" style="font-size:20px;">${u.name}</div><div style="font-size:14px;color:#8c7d6a;">${escapeHTML(u.email)}</div></div>
+        <div style="width:60px;height:60px;border-radius:16px;background:#fff0e8;border:2px solid rgba(212,80,15,.3);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;color:#d4500f;">${escapeHTML(u.name || '?').charAt(0)}</div>
+        <div><div class="font-display font-bold text-ink" style="font-size:20px;">${escapeHTML(u.name || 'User')}</div><div style="font-size:14px;color:#8c7d6a;">${escapeHTML(u.email || '')}</div></div>
       </div>
       <div class="grid-2" style="gap:16px;">
-        ${[['Phone',u.phone||'Not provided'],['Occupation',OCC_LABELS[u.occ]||'—'],['UPI App',u.upiApp||'—'],['Score',u.score||'Not generated']]
-          .map(([k,v]) => `<div style="background:#faf8f3;border-radius:10px;padding:14px;"><div style="font-size:12px;color:#8c7d6a;margin-bottom:3px;">${k}</div><div style="font-size:14px;font-weight:600;color:#1a1208;text-transform:capitalize;">${v}</div></div>`).join('')}
+        ${[['Phone',u.phone||'Not provided'],['Occupation',OCC_LABELS[u.occ]||'—'],['UPI App',upiDisplay],['Monthly transactions',txnDisplay],['CreditDNA score',scoreDisplay],['Parsed payments',(u.transactions||[]).length ? `${u.transactions.length} from OCR` : 'None yet']]
+          .map(([k,v]) => `<div style="background:#faf8f3;border-radius:10px;padding:14px;"><div style="font-size:12px;color:#8c7d6a;margin-bottom:3px;">${k}</div><div style="font-size:14px;font-weight:600;color:#1a1208;">${escapeHTML(String(v))}</div></div>`).join('')}
       </div>
     </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -1728,7 +1926,7 @@ function renderRoleRates() {
 }
 
 function renderRoleLogin(go) {
-  document.getElementById('app').innerHTML = `<div class="auth-page page-enter"><div class="auth-left"><div><div class="font-display font-extrabold mb-4" style="font-size:40px;color:var(--auth-text);">CreditDNA</div><h2 class="font-display font-extrabold" style="font-size:clamp(28px,3.5vw,40px);color:var(--auth-text);">One platform.<br>Three secure views.</h2><p style="font-size:15px;color:var(--ink-muted);line-height:1.75;margin-top:20px;">Role-aware access for consumers, lenders, and platform administrators.</p></div><div style="font-size:12px;color:var(--auth-footer);">Supabase-ready authentication</div></div><div class="auth-right"><div style="max-width:440px;width:100%;margin:auto;"><span class="label">Secure access</span><h1 class="font-display font-extrabold text-ink" style="font-size:30px;margin-bottom:18px;">Sign in to CreditDNA</h1><div class="auth-tabs role-tabs">${[['user','👤 User'],['bank','🏦 Bank'],['admin','🛡️ Admin']].map(([role,label]) => `<button class="auth-tab${V2.role === role ? ' active' : ''}" onclick="V2.role='${role}';renderRoleLogin(window._go)">${label}</button>`).join('')}</div><div id="v2-login-error"></div><div class="field"><label>${V2.role === 'user' ? 'Registered email, phone, or UPI ID' : V2.role === 'bank' ? 'Institutional email' : 'Administrator email'}</label><input id="v2-identifier" autocomplete="username" placeholder="${V2.role === 'user' ? 'you@domain.com' : V2.role === 'bank' ? 'bank@creditdna.demo' : 'admin@creditdna.demo'}"></div>${V2.role === 'bank' ? '<div class="field"><label>Institution ID</label><input id="v2-institution" placeholder="CDNA-BANK-001"></div>' : ''}<div class="field"><label>Password / secure PIN</label><input id="v2-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>${V2.role === 'admin' ? '<div class="field"><label>Mock 2FA code</label><input id="v2-otp" inputmode="numeric" placeholder="123456"></div>' : ''}<button class="btn-primary btn-full btn-lg" onclick="window._v2Login()">Continue as ${V2.role === 'user' ? 'User' : V2.role === 'bank' ? 'Bank' : 'Admin'} →</button><p style="font-size:12px;color:var(--ink-3);text-align:center;margin-top:16px;">${hasLiveSupabase ? 'Live Supabase authentication is enabled.' : 'Demo mode is active until the publishable key is added.'}</p></div></div></div>`;
+  document.getElementById('app').innerHTML = `<div class="auth-page page-enter"><div class="auth-left"><div><div class="font-display font-extrabold mb-4" style="font-size:40px;color:var(--auth-text);">CreditDNA</div><h2 class="font-display font-extrabold" style="font-size:clamp(28px,3.5vw,40px);color:var(--auth-text);">One platform.<br>Three secure views.</h2><p style="font-size:15px;color:var(--ink-muted);line-height:1.75;margin-top:20px;">Role-aware access for consumers, lenders, and platform administrators.</p></div><div style="font-size:12px;color:var(--auth-footer);">Supabase-ready authentication</div></div><div class="auth-right"><div style="max-width:440px;width:100%;margin:auto;"><span class="label">Secure access</span><h1 class="font-display font-extrabold text-ink" style="font-size:30px;margin-bottom:18px;">Sign in to CreditDNA</h1><div class="auth-tabs role-tabs">${[['user','👤 User'],['bank','🏦 Bank'],['admin','🛡️ Admin']].map(([role,label]) => `<button class="auth-tab${V2.role === role ? ' active' : ''}" onclick="V2.role='${role}';renderRoleLogin(window._go)">${label}</button>`).join('')}</div><div id="v2-login-error"></div><div class="field"><label>${V2.role === 'user' ? 'Registered email, phone, or UPI ID' : V2.role === 'bank' ? 'Institutional email' : 'Administrator email'}</label><input id="v2-identifier" autocomplete="username" placeholder="${V2.role === 'user' ? 'you@domain.com' : V2.role === 'bank' ? 'bank@creditdna.demo' : 'admin@creditdna.demo'}"></div>${V2.role === 'bank' ? '<div class="field"><label>Institution ID</label><input id="v2-institution" placeholder="CDNA-BANK-001"></div>' : ''}<div class="field"><label>Password / secure PIN</label><input id="v2-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>${V2.role === 'admin' ? '<div class="field"><label>Mock 2FA code</label><input id="v2-otp" inputmode="numeric" placeholder="123456"></div>' : ''}<button class="btn-primary btn-full btn-lg" onclick="window._v2Login()">Continue as ${V2.role === 'user' ? 'User' : V2.role === 'bank' ? 'Bank' : 'Admin'} →</button><p style="font-size:12px;color:var(--ink-3);text-align:center;margin-top:16px;">${hasLiveSupabase ? 'Live Supabase authentication is enabled.' : 'Bank and admin demo access. Consumer accounts use the main sign-in flow.'}</p><p style="text-align:center;margin-top:10px;font-size:12px;color:var(--ink-3);">Individual user? <span style="color:#d4500f;cursor:pointer;font-weight:600;" onclick="window._go('login')">Sign in or register</span></p></div></div></div>`;
 }
 
 window._v2Login = async () => {
@@ -1743,8 +1941,16 @@ window._v2Login = async () => {
     const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).single();
     if (!profile || profile.role !== V2.role || (V2.role === 'bank' && profile.institution_id !== expectedInstitution)) { await supabaseClient.auth.signOut(); error.innerHTML = '<div class="msg-err">This account does not have the requested role.</div>'; return; }
     DB.setMe({ id: data.user.id, name: profile.display_name, email: data.user.email, role: profile.role, institutionId: profile.institution_id, score: profile.score, joined: profile.created_at });
+  } else if (V2.role === 'user') {
+    const localUser = doLogin(identifier, password);
+    if (localUser) {
+      DB.setMe({ ...localUser, role: 'user' });
+    } else {
+      error.innerHTML = '<div class="msg-err">No account found. Create an account from Sign up, or check your email and password.</div>';
+      return;
+    }
   } else {
-    DB.setMe({ id: `demo-${V2.role}`, name: `Demo ${V2.role}`, email: identifier, role: V2.role, institutionId: expectedInstitution, score: V2.role === 'user' ? 724 : null, joined: new Date().toISOString() });
+    DB.setMe({ id: `demo-${V2.role}`, name: `Demo ${V2.role}`, email: identifier, role: V2.role, institutionId: expectedInstitution, score: null, joined: new Date().toISOString() });
   }
   toast(`${V2.role[0].toUpperCase() + V2.role.slice(1)} session ready`, 'ok');
   window._go(V2.role === 'user' ? 'dashboard' : V2.role);
@@ -1820,8 +2026,9 @@ const PAGES = {
   landing: go => renderLanding(go),
   how: go => renderHow(go),
   pricing: () => renderRoleRates(),
-  login: go => renderRoleLogin(go),
-  register: go => renderRoleLogin(go),
+  login: go => renderLogin(go),
+  register: go => renderRegister(go),
+  'institutional-login': go => renderRoleLogin(go),
   dashboard: go => renderRoleDashboard(go),
   bank: () => renderBankDashboard(),
   admin: () => renderAdminDashboard(),
@@ -1856,6 +2063,10 @@ window.addEventListener('popstate', e => {
 
 const hashPage = window.location.hash.replace('#', '') || 'landing';
 document.addEventListener('DOMContentLoaded', () => {
+  const stale = DB.me();
+  if (stale && String(stale.id).startsWith('demo-') && (stale.role === 'user' || !stale.role)) {
+    DB.logout();
+  }
   const observer = new MutationObserver((records) => {
     records.forEach((record) => record.addedNodes.forEach((node) => {
       if (node.nodeType === Node.ELEMENT_NODE) { normalizeInlineThemeColors(node); translateRenderedCopy(node); }
