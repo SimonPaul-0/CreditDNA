@@ -160,6 +160,9 @@ html[data-theme="dark"] .cdna-card [style*="background:var(--bg-input)"] { backg
 .v2-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0; }
 .v2-rate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:14px; }
 .v2-bottom-tabs { display:none; }
+.staff-table { width:100%; border-collapse:collapse; font-size:13px; }
+.staff-table th, .staff-table td { padding:11px 12px; text-align:left; border-top:1px solid var(--border); vertical-align:middle; }
+.staff-table th { font-size:11px; color:var(--ink-3); font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:var(--bg-alt); border-top:none; }
 @media (max-width:768px) { .v2-kpis { grid-template-columns:1fr 1fr; } .v2-bottom-tabs { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:45; justify-content:space-around; padding:8px; background:var(--bg-nav); border-top:1px solid var(--border); backdrop-filter:blur(12px); } .v2-shell { padding-bottom:82px; } }
 @media (max-width:768px) { .db-grid, .grid-2 { grid-template-columns:1fr; } .auth-right { max-height:none; } #dna-canvas { opacity:.65; width:44%; } pre { max-width:100%; } }
 @media (max-width:600px) { .grid-3, .grid-4 { grid-template-columns:1fr; } .section { padding:56px 0; } .cdna-card { border-radius:14px; } .btn-lg { width:100%; } }
@@ -266,7 +269,7 @@ const DB = {
   me: () => { try { return JSON.parse(localStorage.getItem(KEYS.ME) || 'null'); } catch { return null; } },
   setMe: u => localStorage.setItem(KEYS.ME, JSON.stringify(u)),
   logout: () => localStorage.removeItem(KEYS.ME),
-  findByEmail: email => DB.users().find(u => u.email.toLowerCase() === email.toLowerCase()),
+  findByEmail: email => DB.users().find(u => (u.email || '').toLowerCase() === String(email || '').toLowerCase()),
   updateUser: patch => { const users = DB.users(); const i = users.findIndex(u => u.id === patch.id); if (i > -1) { users[i] = { ...users[i], ...patch }; DB.save(users); const me = DB.me(); if (me && me.id === patch.id) DB.setMe(users[i]); return users[i]; } return null; },
   deleteUser: id => { const users = DB.users().filter(u => u.id !== id); DB.save(users); },
 };
@@ -300,6 +303,184 @@ function refreshMeFromUsers() {
   }
   return me;
 }
+
+function storedRole(u) {
+  if (!u) return 'user';
+  if (u.role === 'bank' || u.role === 'admin') return u.role;
+  return 'user';
+}
+
+function consumerAccounts() {
+  return DB.users().filter(u => storedRole(u) === 'user');
+}
+
+function bankAccounts() {
+  return DB.users().filter(u => storedRole(u) === 'bank');
+}
+
+function findAccountById(id) {
+  return DB.users().find(u => String(u.id) === String(id)) || null;
+}
+
+function matchesStaffQuery(u, q) {
+  if (!q) return true;
+  const s = String(q).trim().toLowerCase();
+  if (!s) return true;
+  return [u.name, u.email, u.phone, u.institutionId, u.upiApp, String(u.id)].some(v => String(v || '').toLowerCase().includes(s));
+}
+
+function upsertInstitutionalAccount({ email, password, role, institutionId }) {
+  const existing = DB.findByEmail(email);
+  if (role === 'bank' && existing && storedRole(existing) === 'user') {
+    return { error: 'This email is already a consumer account. Use a dedicated bank email.' };
+  }
+  if (existing) {
+    const patch = {
+      id: existing.id,
+      password: password || existing.password,
+      role: role === 'admin' && storedRole(existing) === 'user' ? 'user' : role,
+      isAdmin: role === 'admin' || existing.isAdmin || isAdmin(existing),
+    };
+    if (role === 'bank') {
+      patch.role = 'bank';
+      patch.institutionId = institutionId || existing.institutionId || 'CDNA-BANK-001';
+      patch.bankApiKey = existing.bankApiKey || generateBankApiKey();
+      patch.name = existing.name && !String(existing.id).startsWith('demo-') ? existing.name : `Bank desk (${patch.institutionId})`;
+    }
+    const rec = DB.updateUser(patch) || { ...existing, ...patch };
+    const session = { ...rec, role, isAdmin: role === 'admin' || rec.isAdmin, institutionId: rec.institutionId || institutionId };
+    DB.setMe(session);
+    return { user: session };
+  }
+  const rec = {
+    id: Date.now(),
+    name: role === 'bank' ? `Bank desk (${institutionId || 'CDNA-BANK-001'})` : `Admin ${email.split('@')[0]}`,
+    email,
+    password,
+    phone: '',
+    occ: '',
+    txn: '',
+    upiApp: '',
+    role,
+    isAdmin: role === 'admin',
+    institutionId: role === 'bank' ? (institutionId || 'CDNA-BANK-001') : '',
+    score: null,
+    scoreFactors: null,
+    transactions: [],
+    bankApiKey: role === 'bank' ? generateBankApiKey() : null,
+    joined: new Date().toISOString(),
+  };
+  const users = DB.users();
+  users.push(rec);
+  DB.save(users);
+  DB.setMe(rec);
+  return { user: rec };
+}
+
+function staffTxnTable(txns) {
+  if (!txns || !txns.length) return `<p style="font-size:13px;color:var(--ink-3);margin:0;">No parsed payments on this profile yet.</p>`;
+  return `<div style="overflow-x:auto;"><table class="staff-table"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th style="text-align:right;">Amount</th></tr></thead><tbody>${txns.slice(0, 80).map(t => `<tr><td>${escapeHTML(t.date || '—')}</td><td>${escapeHTML(t.description || '—')}</td><td>${escapeHTML(t.type || '—')}</td><td style="text-align:right;font-weight:600;">₹${Number(t.amount || 0).toLocaleString('en-IN')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderStaffUserDetail(u, { canEditRole = false } = {}) {
+  if (!u) return `<div class="cdna-card" style="padding:22px;"><p style="color:var(--ink-3);margin:0;">Select a profile to inspect scores, OCR payments, and contact details.</p></div>`;
+  const s = u.score;
+  const txns = u.transactions || [];
+  const totalCr = txns.filter(t => t.type === 'credit').reduce((a, t) => a + Number(t.amount || 0), 0);
+  const totalDr = txns.filter(t => t.type === 'debit').reduce((a, t) => a + Number(t.amount || 0), 0);
+  const roleCtl = canEditRole ? `<div class="field" style="margin:16px 0 0;"><label>Account role</label><select id="staff-role" onchange="window._adminSetRole(${JSON.stringify(String(u.id))}, this.value)"><option value="user"${storedRole(u) === 'user' ? ' selected' : ''}>User</option><option value="bank"${storedRole(u) === 'bank' ? ' selected' : ''}>Bank</option><option value="admin"${storedRole(u) === 'admin' ? ' selected' : ''}>Admin</option></select></div>` : '';
+  return `<div class="cdna-card" style="padding:22px;">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+      <div>
+        <div class="label">Applicant record</div>
+        <div class="font-display font-bold text-ink" style="font-size:22px;">${escapeHTML(u.name || 'Unnamed')}</div>
+        <div style="font-size:13px;color:var(--ink-3);">${escapeHTML(u.email || '—')} · ${escapeHTML(u.phone || 'No phone')}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:var(--ink-3);">CreditDNA score</div>
+        <div class="font-display font-extrabold" style="font-size:36px;line-height:1;color:${scoreColor(s)};">${s || '—'}</div>
+        <div style="font-size:13px;font-weight:600;color:${scoreColor(s)};">${s ? scoreTier(s) : 'Not scored'}</div>
+      </div>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-top:18px;">
+      ${[['Occupation', OCC_LABELS[u.occ] || '—'],['UPI app', UPI_LABELS[u.upiApp] || u.upiApp || '—'],['Txn self-report', TXN_LABELS[u.txn] || u.txn || '—'],['Joined', u.joined ? new Date(u.joined).toLocaleDateString() : '—'],['Credits', `₹${totalCr.toLocaleString('en-IN')}`],['Debits', `₹${totalDr.toLocaleString('en-IN')}`]].map(([k,v]) => `<div style="background:var(--bg-alt);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--ink-3);">${k}</div><div style="font-weight:600;font-size:14px;">${escapeHTML(String(v))}</div></div>`).join('')}
+    </div>
+    ${roleCtl}
+    <div class="label" style="margin-top:18px;">OCR / statement payments</div>
+    ${staffTxnTable(txns)}
+    <button class="btn-outline btn-sm" style="margin-top:14px;" onclick="window._staffCloseRecord()">Close record</button>
+  </div>`;
+}
+
+function renderStaffBankDetail(b) {
+  if (!b) return '';
+  const key = b.bankApiKey ? `${String(b.bankApiKey).slice(0, 14)}…` : 'Not issued';
+  return `<div class="cdna-card" style="padding:22px;">
+    <div class="label">Bank institution</div>
+    <div class="font-display font-bold text-ink" style="font-size:22px;">${escapeHTML(b.name || 'Bank desk')}</div>
+    <div class="grid-2" style="gap:12px;margin-top:16px;">
+      ${[['Email', b.email || '—'],['Institution ID', b.institutionId || '—'],['API key (masked)', key],['Joined', b.joined ? new Date(b.joined).toLocaleDateString() : '—']].map(([k,v]) => `<div style="background:var(--bg-alt);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--ink-3);">${k}</div><div style="font-weight:600;font-size:14px;">${escapeHTML(String(v))}</div></div>`).join('')}
+    </div>
+    <button class="btn-outline btn-sm" style="margin-top:14px;" onclick="window._staffCloseRecord()">Close record</button>
+  </div>`;
+}
+
+function renderStaffUserTable(rows, emptyCopy) {
+  if (!rows.length) return `<div class="cdna-card" style="padding:28px;text-align:center;color:var(--ink-3);">${escapeHTML(emptyCopy)}</div>`;
+  return `<div class="cdna-card" style="padding:0;overflow:hidden;"><div style="overflow-x:auto;"><table class="staff-table"><thead><tr><th>Name</th><th>Email</th><th>Score</th><th>Payments</th><th></th></tr></thead><tbody>${rows.map(u => `<tr><td>${escapeHTML(u.name || '—')}</td><td>${escapeHTML(u.email || '—')}</td><td style="font-weight:700;color:${scoreColor(u.score)};">${u.score || '—'}</td><td>${(u.transactions || []).length}</td><td><button class="btn-outline btn-sm" onclick="window._staffOpenUser(${JSON.stringify(String(u.id))})">View</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+window._staffOpenUser = (id) => {
+  const qEl = document.getElementById('staff-q');
+  if (qEl) V2.staffQuery = qEl.value;
+  const role = currentRole();
+  const rec = findAccountById(id);
+  if (!rec) { toast('Record not found', 'err'); return; }
+  if (role === 'bank' && storedRole(rec) !== 'user') { toast('Banks can only open applicant profiles', 'err'); return; }
+  V2.staffKind = 'user';
+  V2.staffViewId = String(id);
+  if (role === 'admin') renderAdminDashboard();
+  else renderBankDashboard();
+};
+
+window._staffOpenBank = (id) => {
+  const qEl = document.getElementById('staff-q');
+  if (qEl) V2.staffQuery = qEl.value;
+  if (currentRole() !== 'admin') { toast('Only admins can open bank institutions', 'err'); return; }
+  V2.staffKind = 'bank';
+  V2.staffViewId = String(id);
+  renderAdminDashboard();
+};
+
+window._staffCloseRecord = () => {
+  V2.staffViewId = null;
+  V2.staffKind = null;
+  if (currentRole() === 'admin') renderAdminDashboard();
+  else renderBankDashboard();
+};
+
+window._staffApplyQuery = () => {
+  const el = document.getElementById('staff-q');
+  V2.staffQuery = el ? el.value : '';
+  if (currentRole() === 'admin') renderAdminDashboard();
+  else renderBankDashboard();
+};
+
+window._adminSetTab = (tab) => { V2.adminTab = tab; V2.staffViewId = null; renderAdminDashboard(); };
+
+window._adminSetRole = (id, role) => {
+  if (currentRole() !== 'admin') return;
+  const rec = findAccountById(id);
+  if (!rec) return;
+  const patch = { id: rec.id, role, isAdmin: role === 'admin' || isAdmin(rec) };
+  if (role === 'bank') {
+    patch.institutionId = rec.institutionId || 'CDNA-BANK-001';
+    patch.bankApiKey = rec.bankApiKey || generateBankApiKey();
+  }
+  DB.updateUser(patch);
+  toast(`Role set to ${role}`, 'ok');
+  renderAdminDashboard();
+};
 
 function generateBankApiKey() {
   const bytes = new Uint8Array(20);
@@ -1892,6 +2073,10 @@ const V2 = {
   language: 'en',
   country: 'IN',
   role: 'user',
+  staffQuery: '',
+  staffViewId: null,
+  staffKind: null,
+  adminTab: 'users',
   languages: { en: 'English', hi: 'हिंदी', ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা' },
   countries: { IN: { label: 'India', flag: '🇮🇳', currency: '₹', rate: '9.5%–14.0%' }, US: { label: 'United States', flag: '🇺🇸', currency: '$', rate: '6.5%–12.0%' }, GB: { label: 'United Kingdom', flag: '🇬🇧', currency: '£', rate: '5.3%–9.0%' }, AE: { label: 'UAE', flag: '🇦🇪', currency: 'د.إ', rate: '7.0%–11.5%' } },
   currencies: [ ['IN','₹','🇮🇳'], ['US','$','🇺🇸'], ['GB','£','🇬🇧'], ['EU','€','🇪🇺'], ['JP','¥','🇯🇵'], ['AE','د.إ','🇦🇪'], ['CN','¥','🇨🇳'], ['KR','₩','🇰🇷'], ['SG','S$','🇸🇬'], ['AU','A$','🇦🇺'], ['CA','C$','🇨🇦'], ['CH','CHF','🇨🇭'], ['BR','R$','🇧🇷'], ['ZA','R','🇿🇦'], ['TH','฿','🇹🇭'], ['TR','₺','🇹🇷'], ['ID','Rp','🇮🇩'], ['MX','$','🇲🇽'], ['SE','kr','🇸🇪'], ['NO','kr','🇳🇴'], ['NZ','NZ$','🇳🇿'], ['SA','﷼','🇸🇦'], ['NG','₦','🇳🇬'], ['PL','zł','🇵🇱'], ['RU','₽','🇷🇺'], ['MY','RM','🇲🇾'], ['PH','₱','🇵🇭'], ['VN','₫','🇻🇳'], ['EG','£','🇪🇬'], ['HK','HK$','🇭🇰'] ]
@@ -1979,7 +2164,8 @@ window._v2Login = async () => {
       return;
     }
   } else {
-    DB.setMe({ id: `demo-${V2.role}`, name: `Demo ${V2.role}`, email: identifier, role: V2.role, institutionId: expectedInstitution, score: null, joined: new Date().toISOString() });
+    const saved = upsertInstitutionalAccount({ email: identifier, password, role: V2.role, institutionId: expectedInstitution });
+    if (saved.error) { error.innerHTML = `<div class="msg-err">${escapeHTML(saved.error)}</div>`; return; }
   }
   toast(`${V2.role[0].toUpperCase() + V2.role.slice(1)} session ready`, 'ok');
   window._go(V2.role === 'user' ? 'dashboard' : V2.role);
@@ -1995,11 +2181,65 @@ function renderRoleDashboard(go) {
 }
 
 function renderBankDashboard() {
-  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter"><span class="label">Bank workspace</span><h1 class="font-display font-extrabold text-ink" style="font-size:32px;">Portfolio intelligence</h1><p style="color:var(--ink-2);">${currentCountry().flag} ${currentCountry().label} · full demo pricing access</p><div class="v2-kpis">${[['Applicants reviewed','1,248'],['Verified scores','936'],['Portfolio quality','92.4%'],['Avg. decision time','4m 12s']].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--green);">${value}</div></div>`).join('')}</div><div class="db-grid"><div class="cdna-card" style="padding:22px;"><div class="label">Applicant lookup</div><input placeholder="UPI ID, consent token, or applicant email"><button class="btn-primary" style="margin-top:12px;" onclick="toast('Demo verification: score 724 · Good','ok')">Verify score</button></div>${renderRatesPanel('full')}</div></div>${renderBottomTabs('bank')}`;
+  const q = V2.staffQuery || '';
+  const applicants = consumerAccounts().filter(u => matchesStaffQuery(u, q));
+  const scored = consumerAccounts().filter(u => u.score);
+  const selected = V2.staffKind === 'user' ? findAccountById(V2.staffViewId) : null;
+  const selectedUser = selected && storedRole(selected) === 'user' ? selected : null;
+  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter">
+    <span class="label">Bank workspace</span>
+    <h1 class="font-display font-extrabold text-ink" style="font-size:32px;">Applicant book</h1>
+    <p style="color:var(--ink-2);margin-bottom:8px;">${currentCountry().flag} ${currentCountry().label} · live profiles stored on this device. Passwords are never shown.</p>
+    <div class="v2-kpis">${[['Applicants', String(consumerAccounts().length)],['Scored', String(scored.length)],['Matching search', String(applicants.length)],['Avg. score', scored.length ? String(Math.round(scored.reduce((a, u) => a + u.score, 0) / scored.length)) : '—']].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--green);">${value}</div></div>`).join('')}</div>
+    <div class="cdna-card" style="padding:18px;margin-bottom:16px;">
+      <div class="label">Find an applicant</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field" style="flex:1;min-width:220px;margin:0;"><label>Name, email, phone, or UPI app</label><input id="staff-q" value="${escapeHTML(q)}" placeholder="e.g. ravi@email.com" onkeydown="if(event.key==='Enter')window._staffApplyQuery()"></div>
+        <button class="btn-primary" onclick="window._staffApplyQuery()">Search</button>
+      </div>
+    </div>
+    ${renderStaffUserTable(applicants, consumerAccounts().length ? 'No applicants match this search.' : 'No consumer accounts yet. Users must register (and optionally OCR a statement) on this browser.')}
+    <div style="margin-top:16px;">${renderStaffUserDetail(selectedUser)}</div>
+    <div style="margin-top:16px;">${renderRatesPanel('full')}</div>
+  </div>${renderBottomTabs('bank')}`;
 }
 
 function renderAdminDashboard() {
-  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter"><span class="label">Admin workspace</span><h1 class="font-display font-extrabold text-ink" style="font-size:32px;">Platform control center</h1><div class="v2-kpis">${[['Registered users','12,840'],['Partner banks','24'],['Scores this month','8,312'],['Audit events','2,048']].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--accent);">${value}</div></div>`).join('')}</div><div class="db-grid"><div class="cdna-card" style="padding:22px;"><div class="label">Management</div><button class="btn-outline btn-full" style="margin-bottom:10px;" onclick="toast('Role management is protected by Supabase RLS','info')">Manage user roles</button><button class="btn-outline btn-full" style="margin-bottom:10px;" onclick="toast('Bank onboarding queue opened (demo)','info')">Manage bank institutions</button><button class="btn-outline btn-full" onclick="toast('Audit log export requested (demo)','info')">View audit logs</button><div class="label" style="margin-top:20px;">Adjust demo good-tier rate</div><input id="v2-good-rate" value="${V2.rateOverride?.good || currentCountry().rate}"><button class="btn-primary btn-full" style="margin-top:10px;" onclick="window._saveDemoRate()">Save demo rate</button></div>${renderRatesPanel('full')}</div></div>${renderBottomTabs('admin')}`;
+  const q = V2.staffQuery || '';
+  const tab = V2.adminTab === 'banks' ? 'banks' : 'users';
+  const users = consumerAccounts().filter(u => matchesStaffQuery(u, q));
+  const banks = bankAccounts().filter(u => matchesStaffQuery(u, q));
+  const scored = consumerAccounts().filter(u => u.score);
+  const selected = findAccountById(V2.staffViewId);
+  const userDetail = V2.staffKind === 'user' && selected ? renderStaffUserDetail(selected, { canEditRole: true }) : (tab === 'users' ? renderStaffUserDetail(null) : '');
+  const bankDetail = V2.staffKind === 'bank' && selected && storedRole(selected) === 'bank' ? renderStaffBankDetail(selected) : '';
+  const bankTable = !banks.length
+    ? `<div class="cdna-card" style="padding:28px;text-align:center;color:var(--ink-3);">${DB.users().some(u => storedRole(u) === 'bank') ? 'No banks match this search.' : 'No bank desks yet. Sign in from the Bank tab to create an institution profile on this device.'}</div>`
+    : `<div class="cdna-card" style="padding:0;overflow:hidden;"><div style="overflow-x:auto;"><table class="staff-table"><thead><tr><th>Institution</th><th>Email</th><th>Institution ID</th><th></th></tr></thead><tbody>${banks.map(b => `<tr><td>${escapeHTML(b.name || '—')}</td><td>${escapeHTML(b.email || '—')}</td><td>${escapeHTML(b.institutionId || '—')}</td><td><button class="btn-outline btn-sm" onclick="window._staffOpenBank(${JSON.stringify(String(b.id))})">View</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  document.getElementById('app').innerHTML = `<div class="v2-shell page-enter">
+    <span class="label">Admin workspace</span>
+    <h1 class="font-display font-extrabold text-ink" style="font-size:32px;">People and institutions</h1>
+    <p style="color:var(--ink-2);">Full directory of consumer and bank records stored in this browser. Use View to inspect scores, OCR payments, and bank credentials.</p>
+    <div class="v2-kpis">${[['Users', String(consumerAccounts().length)],['Partner banks', String(bankAccounts().length)],['Scored profiles', String(scored.length)],['Total accounts', String(DB.users().length)]].map(([label,value]) => `<div class="cdna-card" style="padding:18px;"><div style="font-size:12px;color:var(--ink-3);">${label}</div><div class="font-display font-bold" style="font-size:25px;color:var(--accent);">${value}</div></div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="btn-${tab === 'users' ? 'primary' : 'outline'} btn-sm" onclick="window._adminSetTab('users')">Users</button>
+      <button class="btn-${tab === 'banks' ? 'primary' : 'outline'} btn-sm" onclick="window._adminSetTab('banks')">Banks</button>
+    </div>
+    <div class="cdna-card" style="padding:18px;margin-bottom:16px;">
+      <div class="field" style="margin:0;"><label>Search ${tab}</label><input id="staff-q" value="${escapeHTML(q)}" placeholder="${tab === 'banks' ? 'Institution, email, or ID' : 'Name, email, or phone'}" onkeydown="if(event.key==='Enter')window._staffApplyQuery()"></div>
+      <button class="btn-primary btn-sm" style="margin-top:10px;" onclick="window._staffApplyQuery()">Search</button>
+    </div>
+    ${tab === 'users' ? renderStaffUserTable(users, consumerAccounts().length ? 'No users match this search.' : 'No consumer users yet. Register a user account on this browser, then return here.') : bankTable}
+    <div style="margin-top:16px;">${tab === 'users' ? userDetail : (bankDetail || '<div class="cdna-card" style="padding:22px;"><p style="color:var(--ink-3);margin:0;">Select a bank to inspect institution ID and API key.</p></div>')}</div>
+    <div class="db-grid" style="margin-top:16px;">
+      <div class="cdna-card" style="padding:22px;">
+        <div class="label">Demo good-tier rate</div>
+        <input id="v2-good-rate" value="${escapeHTML(V2.rateOverride?.good || currentCountry().rate)}">
+        <button class="btn-primary btn-full" style="margin-top:10px;" onclick="window._saveDemoRate()">Save demo rate</button>
+      </div>
+      ${renderRatesPanel('full')}
+    </div>
+  </div>${renderBottomTabs('admin')}`;
 }
 
 window._saveDemoRate = () => { V2.rateOverride = { ...(V2.rateOverride || {}), good: document.getElementById('v2-good-rate').value }; toast('Demo rate table updated for this session', 'ok'); renderAdminDashboard(); };
